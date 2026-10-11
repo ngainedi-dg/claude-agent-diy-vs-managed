@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GROUPS = ["diy", "managed", "evaluation", "task", "experiments", "tests"]
 CONFIG_SUFFIXES = {".yaml", ".yml", ".toml", ".json"}
-CONFIG_NAMES = {"Dockerfile"}
+CONFIG_NAMES = {"Dockerfile", "agent.md"}  # agent.md is configuration (an agent definition), not documentation
 
 
 def count_lines(path: Path) -> int:
@@ -35,7 +35,7 @@ def measure(group: str) -> dict:
     base = ROOT / group
     files = sorted(p for p in base.rglob("*.py") if "__pycache__" not in p.parts and "data" not in p.parts)
     config = sorted(p for p in base.rglob("*") if p.is_file() and "data" not in p.parts and "__pycache__" not in p.parts
-                    and (p.suffix in CONFIG_SUFFIXES or p.name in CONFIG_NAMES) and "schema" not in p.name)
+                    and not p.name.startswith(".") and (p.suffix in CONFIG_SUFFIXES or p.name in CONFIG_NAMES) and "schema" not in p.name)
     return {"files": {str(p.relative_to(ROOT)): count_lines(p) for p in files},
             "config_files": [str(p.relative_to(ROOT)) for p in config]}
 

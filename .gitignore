@@ -32,3 +32,4 @@ workspace/
 Thumbs.db
 .vscode/
 .idea/
+managed/.state.json

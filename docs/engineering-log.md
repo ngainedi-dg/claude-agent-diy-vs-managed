@@ -168,3 +168,29 @@ Approved by the user before running: one run plus one resume, $1.50 combined cap
 **Found:** SIGKILL leaves the container running. The loop's cleanup never ran, so one `diy-agent-*` container was orphaned and I removed it by hand. A managed runtime owns its own container lifecycle; for the DIY agent, a reaper (label containers, remove stale ones at startup) is another piece we would have to write. Not built, because the experiment doesn't need it, but it belongs in the comparison.
 
 **Phase 3 acceptance:** met. The DIY agent completes the task with generated code running only in Docker, with sessions, structured traces, error handling and tested recovery.
+
+## 2026-10-12 — Phase 4: Managed Agents implementation (built; first paid run pending approval)
+
+**Reading and verification (all free)**
+- Account has Managed Agents access (empty `GET /v1/agents` earlier). Beta header `managed-agents-2026-04-01` is set by the SDK.
+- The cloud sandbox ships Python 3.10-3.13 with NumPy, pandas and Matplotlib installed, so the environment needs **no `packages`**. Setup effort for the analysis libraries: zero. (The DIY side needed a Dockerfile and a pip install.)
+- Sandbox is much larger than ours: up to 8 GB RAM and 10 GB disk, Ubuntu 24.04, many tools (git, ffmpeg, LibreOffice, Playwright...). Our Docker sandbox has 1 GB, 1 CPU and a handful of allowed commands. This is a fairness caveat for runtime comparisons, not something I can equalise.
+- **Gotcha:** an environment created through the API without a `networking` block defaults to `unrestricted`. I set `networking: {type: limited}` with no hosts and no package managers, which is the closest match to the DIY `--network none`.
+- Default effort on the agent echoes as `high` (the DIY loop gets the same default for Sonnet 5.5), so the two are comparable on that axis.
+- The built-in toolset (`agent_toolset_20260401`: bash, read, write, edit, glob, grep, web tools) is broader than our five tools. I disabled web search and fetch and set the permission policy to `always_allow`, because nobody is present to approve calls and the sandbox has no network or secrets.
+- Platform features we had to build for DIY and did not here: the loop, tool dispatch, sandbox, session persistence, prompt caching, context compaction (built in), and a hard spend ceiling (`budget`, enforced by the platform before each model call; ours is an estimate checked by our own loop).
+- Pricing: tokens at the model's rates plus $0.08 per session-hour while `running` (about $0.004 for a 3-minute run).
+
+**Work done**
+- `managed/agent.md` and `managed/environment.yaml`: the agent and environment as files (agent.md is in the `ant apply` format), plus `managed/main.py` (229 lines of code): create-or-reuse agent and environment (ids kept in a git-ignored state file), upload the CSV, create a budgeted session with the task as `initial_events`, stream events with reconnect and de-duplication, interrupt on timeout, download `/mnt/session/outputs`, record usage, write `run.json`, `summary.md` and a redacted `trace.jsonl`, `--attach` to re-join a session after the client dies.
+- A free dry run created the agent (v1), the environment, uploaded the CSV, created a session with no work and deleted it. This validated every API shape without spending anything.
+- 21 offline tests: reuse of resources, agent versioning on edit, stream reconnect, event interpretation, timeouts, redaction, output download safety, cost arithmetic, and checks that `managed/main.py` imports no subprocess, docker, `diy` or agent framework.
+
+**Complications**
+- The `ant` CLI is not installed, so I used the SDK to create resources. About 40 lines of `managed/main.py` (state file, hashing, create/update) would disappear with `ant apply`; the quickstart recommends that route. I kept the SDK so the repo needs nothing but `uv sync`. Count that when comparing.
+- A test that drained a generator forever caught a real design point: after a dropped stream we must keep reconnecting until the caller stops, because stopping is the caller's decision. The reconnect loop does that, and the stored-event listing makes re-attaching to an already-finished session work.
+- Patching a source file through a shell here-doc broke two string literals (escaped newlines). Edit the file directly instead.
+
+**Size so far (`uv run python -m experiments.loc`):** managed 229 lines of code (1 Python file) plus 2 configuration files. DIY: 619 lines of code in 6 files plus a Dockerfile. These numbers are not a verdict. `managed/main.py` carries concerns DIY also has (redaction, trace, output handling), and neither side's number says anything about how much *thinking* each took.
+
+**Time spent so far on Phase 4:** about 2h (estimate).

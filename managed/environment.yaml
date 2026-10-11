@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://platform.claude.com/schemas/ant/beta/environment.json
+name: diy-vs-managed-sales-analyst
+config:
+  type: cloud
+  networking:
+    type: limited   # no allowed_hosts and no package managers: the sandbox has no outbound access
