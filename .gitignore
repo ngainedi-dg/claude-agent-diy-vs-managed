@@ -13,9 +13,9 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
-# Generated data and ground truth (regenerate with task/generate_data.py)
+# Generated dataset (task/data) and ground truth (evaluation/data); regenerate with task/generate_data.py
 task/data/
-task/ground_truth*
+evaluation/data/
 
 # Experiment output (keep the directory, ignore run contents until traces are reviewed for secrets)
 results/*
