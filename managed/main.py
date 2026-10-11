@@ -160,9 +160,10 @@ class RunState:
         return False
 
 
-def observe(client, session_id: str, trace: Path, deadline: float, log=print) -> RunState:
+def observe(client, session_id: str, trace: Path, deadline: float, log=print, mode: str = "a") -> RunState:
+    """Watch until the session settles. A re-attach passes mode="w": it re-reads every stored event, so appending would duplicate them."""
     state = RunState()
-    with trace.open("a", encoding="utf-8") as out:
+    with trace.open(mode, encoding="utf-8") as out:
         for e in watch(client, session_id, log):
             out.write(redact(json.dumps(e.model_dump(mode="json"), default=str)) + "\n")
             if state.handle(e, log):
@@ -293,7 +294,7 @@ def main(argv=None) -> int:
 
     if a.attach:
         info = json.loads((a.attach / "session.json").read_text())
-        run = observe(client, info["session_id"], a.attach / "trace.jsonl", deadline)
+        run = observe(client, info["session_id"], a.attach / "trace.jsonl", deadline, mode="w")
         return finish(client, info["session_id"], a.attach, run, info["model"], started, input_file_id=info.get("file_id"))
 
     state = ensure_resources(client)

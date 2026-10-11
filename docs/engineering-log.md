@@ -273,3 +273,19 @@ The only time data this project has is wall-clock timestamps from git and from t
 | Phase 5 tooling | 00:45 | 12 min |
 
 Other measured points: first complete DIY run finished about 23:56; first complete Managed session finished about 00:28 (session timestamps 18:53-18:58 UTC).
+
+## 2026-10-12 — Phase 5 results: experiment and reliability scenarios
+
+All runs approved by the user beforehand (experiment about $4.80 with an $8.00 stop; scenarios about $1.50-$2.00). Raw results are in `results/` (gitignored); the research summary is `LINKEDIN_FINDINGS.md`.
+
+**Main experiment (5 + 5 runs, alternating order):** all 10 completed. Median active time 171 s (DIY) vs 271 s (Managed); median cost $0.34 vs $0.56; median recall 0.90 on both (Managed n=4 scored; rep 1 failed the `summary.json` schema with a boolean evidence value). `analysis.py` reran in a clean container for all 10. Spend $4.79.
+
+**Reliability scenarios (one run per side each):** syntax error, missing file, tool error: handled by the model on both sides. Tool timeout: both wrote TIMEOUT, but the DIY agent was rejected by our command allowlist (`python3` is not allowed, `python` is) and wrote its own subprocess timeout, so our sandbox kill path was never exercised; Managed's bash tool returned "command timed out after 295s". Budget cap $0.05: DIY stopped at $0.0503 (our loop); Managed paused with `budget_reached` at $0.06 list cost. Iteration limit: DIY `max_iterations`; not applicable to Managed. Client killed with SIGKILL: DIY resumed, did not re-run the one in-flight call, completed; Managed re-attached and completed.
+
+**Problems found while running**
+1. The first launch of the failure scenarios never ran. The experiment runner's child processes inherited stdin and consumed the rest of the shell script that launched them. Fixed with `stdin=DEVNULL` everywhere, with a test.
+2. A re-attach to a Managed session appended every stored event to the trace again (37 duplicates in the interrupted run). Fixed (a re-attach now rewrites the trace), with a test.
+3. Managed's `missing_file` run took 63 s because the agent ran `find /` on the large cloud filesystem; DIY's took 8 s. A property of the agent's command and the sandbox, not an error.
+4. The A09 (Apparel dip) anomaly was found by 2 of 2 pilot runs but by 1 of 5 per side in the experiment. Cause unknown; confirmed from the findings text that it is a real miss, not a matcher gap.
+
+**Not measured:** whether the Managed session kept working while the client was dead; DIY local compute cost; per-component development effort.

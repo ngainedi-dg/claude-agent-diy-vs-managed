@@ -287,3 +287,14 @@ def test_final_status_mapping(tmp_path, monkeypatch, stop, expected):
     assert json.loads((tmp_path / "run.json").read_text())["status"] == expected
     assert (code == 0) == (expected == "completed")
     assert (tmp_path / "summary.md").is_file()
+
+
+def test_reattaching_does_not_duplicate_events_in_the_trace(tmp_path):
+    """Found in the kill-and-resume scenario: a re-attach re-lists every stored event, so appending repeated the first ones."""
+    trace = tmp_path / "t.jsonl"
+    stored = [Ev("agent.tool_use", "1", name="bash"), Ev("agent.tool_use", "2", name="bash"), idle("3")]
+    trace.write_text('{"id": "1"}\n{"id": "2"}\n')  # what the first, killed, client had written
+    client, _ = fake_client([FakeStream([])], stored=stored)
+    mm.observe(client, "s", trace, deadline=float("inf"), log=lambda *_: None, mode="w")
+    ids = [json.loads(line)["id"] for line in trace.read_text().splitlines()]
+    assert ids == ["1", "2", "3"]
