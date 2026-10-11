@@ -72,7 +72,7 @@ class Sandbox:
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.workspace.chmod(0o777)  # the container user is not the host user on every setup
         r = _docker([
-            "run", "-d", "--rm", "--name", self.name,
+            "run", "-d", "--rm", "--init", "--name", self.name,  # --init: PID 1 reaps zombies, or a fork loop wedges the container
             "--network", "none",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
             "--read-only", "--tmpfs", "/tmp:rw,size=256m,mode=1777",
@@ -108,6 +108,6 @@ class Sandbox:
         if r.returncode == 137 and duration >= timeout - 1:  # SIGKILL from `timeout`
             return ExecResult(truncate(r.stdout), f"Killed: exceeded {timeout}s timeout.\n" + truncate(r.stderr),
                               137, duration, timed_out=True)
-        if r.returncode == 125 or "No such container" in r.stderr:
+        if r.returncode == 125 or "No such container" in r.stderr or "OCI runtime exec failed" in r.stdout + r.stderr:
             raise SandboxError(f"sandbox container unavailable: {r.stderr.strip()}")
         return ExecResult(truncate(r.stdout), truncate(r.stderr), r.returncode, duration)

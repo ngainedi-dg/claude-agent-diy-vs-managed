@@ -89,10 +89,10 @@ def format_exec(result) -> str:
 
 
 class Dispatcher:
-    def __init__(self, sandbox: Sandbox):
+    def __init__(self, sandbox: Sandbox, python_calls: int = 0):
         self.sandbox = sandbox
         self.validators = {t["name"]: Draft202012Validator(t["input_schema"]) for t in TOOLS}
-        self.python_calls = 0
+        self.python_calls = python_calls  # continues numbering scripts after a resume
 
     @property
     def definitions(self):

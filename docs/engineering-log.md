@@ -126,3 +126,31 @@ Approved by the user before running: one run on `claude-sonnet-5-5`, $3.00 cap.
 **Not changed on purpose:** I did not tune the dataset to make A01 easier after seeing this result. Whether a 45% drop in West transactions over 2.5 months is findable is a property of the benchmark and should be judged on all runs, not one.
 
 **Time spent on Phase 2 including the run and its analysis:** about 4h (estimate).
+
+## 2026-10-12 — Phase 3: DIY infrastructure
+
+**Work done**
+- `diy/sessions.py`: SQLite session store (conversation, tool calls, usage, errors, status, elapsed time). One database per run. All text is redacted on the way in.
+- `diy/agent_loop.py` rewritten around the session. Messages are plain dicts in the API's shape; response blocks are stored with `model_dump(exclude_unset=True)`. A resumed run rebuilds the history from the database.
+- Recovery rule: a tool call is written as `started` before it runs and `done` after. On resume, `done` calls are reused, calls that never began are run, and calls left `started` are **not** run again; the model gets an explicit "outcome unknown" result instead.
+- API failures: transient errors (connection, 408/409/429, 5xx) are retried with 5/20/60s backoff on top of the SDK's own two retries; other errors (400, 401, ...) fail at once. Both are recorded in an errors table, separately from tool failures and sandbox failures.
+- Ctrl-C ends the run as `interrupted`; any status except `completed` and `refusal` can be resumed (`--resume RUN_DIR`, with optional new limits).
+- Output per run: `session.sqlite`, `trace.jsonl`, `run.json` and a human-readable `summary.md`.
+- `experiments/loc.py` fixes the LOC methodology (non-blank, non-comment, non-docstring Python lines; docs, data, lockfiles, config excluded and listed separately).
+- Tests: 87 pass (loop, retries, sessions, recovery, redaction, tools, CLI, and real-container tests).
+
+**Complications and bugs found by tests**
+- **Sandbox wedged by a fork loop.** A test that forked 2000 children left the container unusable ("OCI runtime exec failed: procReady not received"). Cause: PID 1 was `sleep infinity`, which never reaps zombies, so they filled the 256-process limit for good. Fix: `docker run --init`. Any model-written code that spawns subprocesses could have hit this. It is the sort of thing a managed sandbox presumably handles, and we found it only because we wrote a test for it.
+- **Misclassified failure.** The same failure came back as a normal result with exit code 128 and the error text in stdout, so the loop would have shown Docker's message to the model as if it were the program's output. `exec` now treats "OCI runtime exec failed" as a sandbox failure.
+- A test that parsed `/proc/mounts` broke on a trailing blank line (test bug).
+- Scratch-script numbering after resume would have overwritten `step_001.py`; `Dispatcher` now takes the starting count from the session.
+- A run that crashes after saving an assistant message that was cut off by `max_tokens`, but before saving the "not run" results, would run that truncated tool call on resume. This is a narrow gap and I have not closed it. (Fix would be to store `stop_reason` with the message.)
+
+**What is not verified yet**
+- The refactored loop has not run against the real API, and neither has resume. The block serialisation is checked against the SDK's own response types offline, but only the API can confirm it accepts the dicts back. A real run plus a real interruption is needed (it costs money, so it needs approval).
+
+**DIY size at this point (`uv run python -m experiments.loc`):** `diy/` 619 lines of code in 6 Python files, plus one Dockerfile. `agent_loop.py` 171, `sessions.py` 144, `tools.py` 126, `main.py` 98, `sandbox.py` 80. Evaluator 216, dataset generator 300, tests 645.
+
+**Infrastructure implemented for the DIY agent that Managed Agents is expected to provide (to be confirmed in Phase 4):** the agent loop, tool dispatch and argument validation, the sandbox (isolation flags, limits, timeouts, zombie reaping), session persistence and crash recovery, API retry policy, token and cost accounting, execution tracing.
+
+**Time spent on Phase 3:** about 5h (estimate), of which roughly 1h was the two sandbox bugs and one serialisation round-trip check.

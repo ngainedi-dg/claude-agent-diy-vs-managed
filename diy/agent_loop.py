@@ -3,18 +3,21 @@
 One pass of the loop: send the conversation, look at stop_reason, run any
 requested tools, send the results back. It ends when the model stops asking for
 tools or when a limit is hit. No agent framework and no SDK tool runner.
+
+All state lives in the Session (SQLite), so a run can be inspected afterwards and
+resumed after an interruption. Messages are kept as plain dicts, the same shape the
+API takes, whether they came from a live response or from the database.
 """
 
 import json
-import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
 
 import anthropic
 
 from diy.sandbox import SandboxError
+from diy.sessions import Session, Usage, now, redact
 from diy.tools import Dispatcher
 
 # USD per million tokens: input, output, 5-minute cache write, cache read.
@@ -22,40 +25,20 @@ PRICES = {
     "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
     "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20),
 }
-SECRET = re.compile(r"sk-ant-[A-Za-z0-9_\-]+")
+API_RETRY_DELAYS_S = (5, 20, 60)  # on top of the SDK's own two quick retries
+UNCERTAIN = ("This call was interrupted before a result was recorded, so it may or may not have taken effect. "
+             "It has not been run again. Inspect the workspace to see what state it left, then decide whether to retry.")
 
 
-@dataclass
-class Limits:
-    max_iterations: int = 40
-    max_seconds: int = 1800
-    max_cost_usd: float = 3.00
-
-
-@dataclass
-class Usage:
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cache_write_tokens: int = 0
-    cache_read_tokens: int = 0
-    model_calls: int = 0
-
-    def add(self, u) -> None:
-        self.model_calls += 1
-        self.input_tokens += getattr(u, "input_tokens", 0) or 0
-        self.output_tokens += getattr(u, "output_tokens", 0) or 0
-        self.cache_write_tokens += getattr(u, "cache_creation_input_tokens", 0) or 0
-        self.cache_read_tokens += getattr(u, "cache_read_input_tokens", 0) or 0
-
-    def cost_usd(self, model: str) -> float:
-        inp, out, write, read = PRICES[model]
-        return (self.input_tokens * inp + self.output_tokens * out
-                + self.cache_write_tokens * write + self.cache_read_tokens * read) / 1_000_000
+def cost_usd(usage: Usage, model: str) -> float:
+    inp, out, write, read = PRICES[model]
+    return (usage.input_tokens * inp + usage.output_tokens * out
+            + usage.cache_write_tokens * write + usage.cache_read_tokens * read) / 1_000_000
 
 
 @dataclass
 class RunResult:
-    status: str  # completed | max_iterations | max_duration | budget_exhausted | refusal | api_error | sandbox_error | unexpected_stop
+    status: str  # completed | max_iterations | max_duration | budget_exhausted | refusal | api_error | sandbox_error | unexpected_stop | interrupted
     iterations: int
     usage: Usage
     cost_usd: float
@@ -76,87 +59,163 @@ class Tracer:
     def emit(self, event: str, **data) -> None:
         if not self.path:
             return
-        record = {"ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), "event": event, **data}
-        line = SECRET.sub("[REDACTED]", json.dumps(record, default=str))
+        line = redact(json.dumps({"ts": now(), "event": event, **data}, default=str))
         with self.path.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
 
 
-def text_of(content) -> str:
-    return "\n".join(b.text for b in content if b.type == "text")
+def block_to_dict(block) -> dict:
+    """A response content block as the plain dict the API accepts back (unset fields stay unset)."""
+    if hasattr(block, "model_dump"):
+        return block.model_dump(mode="json", exclude_unset=True)
+    return dict(vars(block))
 
 
-def run_agent(client, *, model: str, system: str, task: str, dispatcher: Dispatcher, limits: Limits,
-              tracer: Tracer, max_tokens: int = 16000, log=print) -> RunResult:
-    messages = [{"role": "user", "content": task}]
-    usage = Usage()
-    executed: dict[str, tuple[str, bool]] = {}  # tool_use id -> result; a call is never run twice
-    started = time.monotonic()
-    tracer.emit("run_start", model=model, limits=vars(limits), tools=[t["name"] for t in dispatcher.definitions])
+def text_of(content: list[dict]) -> str:
+    return "\n".join(b["text"] for b in content if b["type"] == "text")
 
-    def finish(status, iterations, error="", final_text=""):
-        result = RunResult(status, iterations, usage, usage.cost_usd(model), time.monotonic() - started,
-                           final_text, error, messages)
-        tracer.emit("run_end", status=status, iterations=iterations, error=error,
-                    usage=vars(usage), cost_usd=round(result.cost_usd, 4), duration_s=round(result.duration_s, 1))
+
+def is_retryable(e: anthropic.APIError) -> bool:
+    if isinstance(e, anthropic.APIConnectionError):  # includes timeouts
+        return True
+    return isinstance(e, anthropic.APIStatusError) and (e.status_code in (408, 409, 429) or e.status_code >= 500)
+
+
+def pending_tool_uses(messages: list[dict]) -> list[dict]:
+    """tool_use blocks in the last assistant message that have not been answered yet."""
+    last = messages[-1] if messages else None
+    if last and last["role"] == "assistant" and isinstance(last["content"], list):
+        return [b for b in last["content"] if b["type"] == "tool_use"]
+    return []
+
+
+def run_agent(client, *, session: Session, dispatcher: Dispatcher, tracer: Tracer, max_tokens: int = 16000,
+              log=print, sleep=time.sleep) -> RunResult:
+    model, system, limits = session.model, session.system, session.limits
+    usage, iteration = session.usage, session.iterations
+    messages = session.messages()
+    base_elapsed, started = session.elapsed_s, time.monotonic()
+    elapsed = lambda: base_elapsed + time.monotonic() - started
+    resumed = bool(messages)
+
+    def add_message(role, content):
+        messages.append({"role": role, "content": content})
+        session.append_message(role, content)
+
+    def checkpoint():
+        session.save_progress(iterations=iteration, usage=usage, elapsed_s=elapsed())
+
+    def finish(status, error="", final_text=""):
+        checkpoint()
+        session.set_status(status, error)
+        result = RunResult(status, iteration, usage, cost_usd(usage, model), elapsed(), final_text, error, messages)
+        tracer.emit("run_end", status=status, iterations=iteration, error=error, usage=vars(usage),
+                    cost_usd=round(result.cost_usd, 4), duration_s=round(result.duration_s, 1))
         return result
 
-    for iteration in range(1, limits.max_iterations + 1):
-        if time.monotonic() - started > limits.max_seconds:
-            return finish("max_duration", iteration - 1)
-        if usage.cost_usd(model) >= limits.max_cost_usd:
-            return finish("budget_exhausted", iteration - 1)
+    def call_model():
+        """One model call. Transient failures are retried with backoff; anything else is raised."""
+        for attempt in range(len(API_RETRY_DELAYS_S) + 1):
+            try:
+                return client.messages.create(
+                    model=model, max_tokens=max_tokens, system=system, tools=dispatcher.definitions,
+                    messages=messages, cache_control={"type": "ephemeral"})
+            except anthropic.APIError as e:
+                session.add_error("api", f"{type(e).__name__}: {e}")
+                tracer.emit("api_error", iteration=iteration, attempt=attempt, error_type=type(e).__name__,
+                            retryable=is_retryable(e), error=str(e))
+                if not is_retryable(e) or attempt == len(API_RETRY_DELAYS_S):
+                    raise
+                log(f"    API error ({type(e).__name__}); retrying in {API_RETRY_DELAYS_S[attempt]}s")
+                sleep(API_RETRY_DELAYS_S[attempt])
 
-        t0 = time.monotonic()
-        try:
-            # The SDK already retries 408/409/429/5xx twice with backoff.
-            response = client.messages.create(
-                model=model, max_tokens=max_tokens, system=system, tools=dispatcher.definitions,
-                messages=messages, cache_control={"type": "ephemeral"})
-        except anthropic.APIError as e:
-            tracer.emit("api_error", iteration=iteration, error_type=type(e).__name__, error=str(e))
-            return finish("api_error", iteration - 1, f"{type(e).__name__}: {e}")
-        usage.add(response.usage)
-        # The whole content list goes back unchanged, so thinking blocks stay valid.
-        messages.append({"role": "assistant", "content": response.content})
-        tool_uses = [b for b in response.content if b.type == "tool_use"]
-        tracer.emit("model_response", iteration=iteration, stop_reason=response.stop_reason,
-                    duration_s=round(time.monotonic() - t0, 2), text=text_of(response.content),
-                    tool_calls=[b.name for b in tool_uses], usage=response.usage.model_dump())
-        log(f"[{iteration}] {response.stop_reason}: " + (", ".join(b.name for b in tool_uses) or "(no tool calls)"))
-
-        if response.stop_reason == "end_turn":
-            return finish("completed", iteration, final_text=text_of(response.content))
-        if response.stop_reason == "refusal":
-            return finish("refusal", iteration, "model declined to continue")
-        if response.stop_reason == "pause_turn":
-            continue  # nothing to answer; the assistant turn is already last in the history
-        if response.stop_reason == "max_tokens" and not tool_uses:
-            messages.append({"role": "user", "content": "Your last response hit the output limit. Continue, "
-                             "writing long files in smaller pieces."})
-            continue
-        if response.stop_reason not in ("tool_use", "max_tokens"):
-            return finish("unexpected_stop", iteration, f"stop_reason={response.stop_reason}")
-
-        # All results for one assistant turn go back in a single user message.
+    def answer_tool_calls(tool_uses):
+        """Run (or recover) each requested call. All results go back in one user message."""
         results = []
         for block in tool_uses:
-            if response.stop_reason == "max_tokens":  # the call may be cut off mid-argument
-                text, is_error = "Not run: your response was truncated by the output limit. Retry with less content.", True
-            elif block.id in executed:
-                text, is_error = executed[block.id]
+            row = session.tool_call(block["id"])
+            if row and row["status"] == "done":  # already executed (resumed session): reuse, never re-run
+                text, is_error = row["result"], bool(row["is_error"])
+            elif row:  # started but never finished: outcome unknown, so do not run it again
+                session.mark_uncertain(block["id"])
+                text, is_error = UNCERTAIN, True
+                tracer.emit("uncertain_tool_call", iteration=iteration, id=block["id"], tool=block["name"])
+                log(f"    {block['name']}: interrupted earlier, not re-run")
             else:
-                t1 = time.monotonic()
+                t0 = time.monotonic()
+                session.begin_tool(block["id"], iteration, block["name"], block["input"])
                 try:
-                    text, is_error = dispatcher.run(block.name, block.input)
-                except SandboxError as e:  # the sandbox broke, not the agent's code
-                    tracer.emit("sandbox_error", iteration=iteration, tool=block.name, error=str(e))
-                    return finish("sandbox_error", iteration, str(e))
-                executed[block.id] = (text, is_error)
-                tracer.emit("tool_call", iteration=iteration, id=block.id, tool=block.name, args=block.input,
-                            is_error=is_error, duration_s=round(time.monotonic() - t1, 2), result=text)
-                log(f"    {block.name} -> {'error' if is_error else 'ok'} ({time.monotonic() - t1:.1f}s)")
-            results.append({"type": "tool_result", "tool_use_id": block.id, "content": text, "is_error": is_error})
-        messages.append({"role": "user", "content": results})
+                    text, is_error = dispatcher.run(block["name"], block["input"])
+                except SandboxError as e:  # the sandbox broke, not the agent's code; the call stays "started"
+                    session.add_error("sandbox", str(e))
+                    tracer.emit("sandbox_error", iteration=iteration, tool=block["name"], error=str(e))
+                    raise
+                except Exception as e:  # a bug in our own tool code; tell the model rather than crash the run
+                    session.add_error("tool", f"{block['name']}: {type(e).__name__}: {e}")
+                    text, is_error = f"internal tool error: {type(e).__name__}: {e}", True
+                session.finish_tool(block["id"], text, is_error, time.monotonic() - t0)
+                tracer.emit("tool_call", iteration=iteration, id=block["id"], tool=block["name"], args=block["input"],
+                            is_error=is_error, duration_s=round(time.monotonic() - t0, 2), result=text)
+                log(f"    {block['name']} -> {'error' if is_error else 'ok'} ({time.monotonic() - t0:.1f}s)")
+            results.append({"type": "tool_result", "tool_use_id": block["id"], "content": text, "is_error": is_error})
+            checkpoint()
+        add_message("user", results)
 
-    return finish("max_iterations", limits.max_iterations)
+    tracer.emit("run_resume" if resumed else "run_start", model=model, limits=vars(limits),
+                tools=[t["name"] for t in dispatcher.definitions], iteration=iteration)
+    session.set_status("running")
+    if not resumed:
+        add_message("user", session.task)
+
+    try:
+        while True:
+            if pending := pending_tool_uses(messages):  # first pass after a resume, or after a tool_use response
+                answer_tool_calls(pending)
+
+            if iteration >= limits.max_iterations:
+                return finish("max_iterations")
+            if elapsed() > limits.max_seconds:
+                return finish("max_duration")
+            if cost_usd(usage, model) >= limits.max_cost_usd:
+                return finish("budget_exhausted")
+
+            iteration += 1
+            t0 = time.monotonic()
+            try:
+                response = call_model()
+            except anthropic.APIError as e:
+                iteration -= 1
+                return finish("api_error", f"{type(e).__name__}: {e}")
+            usage.add(response.usage)
+            # The whole content list goes back unchanged, so thinking blocks stay valid.
+            content = [block_to_dict(b) for b in response.content]
+            add_message("assistant", content)
+            checkpoint()
+            tool_uses = [b for b in content if b["type"] == "tool_use"]
+            tracer.emit("model_response", iteration=iteration, stop_reason=response.stop_reason,
+                        duration_s=round(time.monotonic() - t0, 2), text=text_of(content),
+                        tool_calls=[b["name"] for b in tool_uses], usage=response.usage.model_dump())
+            log(f"[{iteration}] {response.stop_reason}: " + (", ".join(b["name"] for b in tool_uses) or "(no tool calls)"))
+
+            if response.stop_reason == "end_turn":
+                return finish("completed", final_text=text_of(content))
+            if response.stop_reason == "refusal":
+                return finish("refusal", "model declined to continue")
+            if response.stop_reason == "pause_turn":
+                continue  # nothing to answer; the assistant turn is already last in the history
+            if response.stop_reason == "max_tokens":
+                if tool_uses:  # the call may be cut off mid-argument, so it is not run
+                    add_message("user", [{"type": "tool_result", "tool_use_id": b["id"], "is_error": True,
+                                          "content": "Not run: your response was truncated by the output limit. "
+                                                     "Retry with less content."} for b in tool_uses])
+                else:
+                    add_message("user", "Your last response hit the output limit. Continue, "
+                                        "writing long files in smaller pieces.")
+                continue
+            if response.stop_reason != "tool_use":
+                return finish("unexpected_stop", f"stop_reason={response.stop_reason}")
+            # stop_reason == "tool_use": the top of the loop answers the calls
+    except KeyboardInterrupt:
+        return finish("interrupted", "interrupted by the user (Ctrl-C)")
+    except SandboxError as e:
+        return finish("sandbox_error", str(e))
