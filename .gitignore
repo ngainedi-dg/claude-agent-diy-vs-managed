@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated data and ground truth (regenerate with task/generate_data.py)
+task/data/
+task/ground_truth*
+
+# Experiment output (keep the directory, ignore run contents until traces are reviewed for secrets)
+results/*
+!results/.gitkeep
+
+# DIY agent runtime state
+*.sqlite
+*.sqlite3
+sessions/
+workspace/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
