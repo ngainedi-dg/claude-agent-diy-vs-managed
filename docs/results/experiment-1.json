@@ -1,0 +1,858 @@
+{
+  "runs": [
+    {
+      "implementation": "diy",
+      "run": "rep-1",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 207.3,
+      "model_calls": 20,
+      "tool_calls": 21,
+      "input_tokens": 42,
+      "output_tokens": 26120,
+      "cache_read_tokens": 525734,
+      "cache_write_tokens": 54816,
+      "peak_context_tokens": 54818,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.4509,
+      "runtime_cost_usd": null,
+      "total_cost_usd": 0.4509,
+      "reported_list_cost_usd": null,
+      "artifact_files": 9,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 13,
+      "chart_count": 5,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01",
+          "L03"
+        ],
+        "unmatched_findings": 0,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 11,
+        "unsupported": 2,
+        "unverifiable": 30,
+        "checked_fraction": 0.302
+      }
+    },
+    {
+      "implementation": "diy",
+      "run": "rep-2",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 167.5,
+      "model_calls": 16,
+      "tool_calls": 17,
+      "input_tokens": 34,
+      "output_tokens": 20342,
+      "cache_read_tokens": 260331,
+      "cache_write_tokens": 40519,
+      "peak_context_tokens": 40521,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.3308,
+      "runtime_cost_usd": null,
+      "total_cost_usd": 0.3308,
+      "reported_list_cost_usd": null,
+      "artifact_files": 10,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 12,
+      "chart_count": 6,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01"
+        ],
+        "unmatched_findings": 1,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 9,
+        "unsupported": 4,
+        "unverifiable": 39,
+        "checked_fraction": 0.25
+      }
+    },
+    {
+      "implementation": "diy",
+      "run": "rep-3",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 168.2,
+      "model_calls": 18,
+      "tool_calls": 18,
+      "input_tokens": 38,
+      "output_tokens": 19935,
+      "cache_read_tokens": 387919,
+      "cache_write_tokens": 38729,
+      "peak_context_tokens": 41069,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.335,
+      "runtime_cost_usd": null,
+      "total_cost_usd": 0.335,
+      "reported_list_cost_usd": null,
+      "artifact_files": 8,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 13,
+      "chart_count": 5,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 8,
+        "injected_recall": 0.8,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A10"
+        ],
+        "missed": [
+          "A08",
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01",
+          "L03"
+        ],
+        "unmatched_findings": 2,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 5,
+        "unsupported": 0,
+        "unverifiable": 42,
+        "checked_fraction": 0.106
+      }
+    },
+    {
+      "implementation": "diy",
+      "run": "rep-4",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 170.8,
+      "model_calls": 15,
+      "tool_calls": 15,
+      "input_tokens": 32,
+      "output_tokens": 20791,
+      "cache_read_tokens": 266724,
+      "cache_write_tokens": 40207,
+      "peak_context_tokens": 40209,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.3352,
+      "runtime_cost_usd": null,
+      "total_cost_usd": 0.3352,
+      "reported_list_cost_usd": null,
+      "artifact_files": 8,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 13,
+      "chart_count": 5,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01"
+        ],
+        "unmatched_findings": 2,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 2,
+        "unsupported": 0,
+        "unverifiable": 52,
+        "checked_fraction": 0.037
+      }
+    },
+    {
+      "implementation": "diy",
+      "run": "rep-5",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 203.8,
+      "model_calls": 18,
+      "tool_calls": 18,
+      "input_tokens": 38,
+      "output_tokens": 25963,
+      "cache_read_tokens": 392805,
+      "cache_write_tokens": 49452,
+      "peak_context_tokens": 51792,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.4226,
+      "runtime_cost_usd": null,
+      "total_cost_usd": 0.4226,
+      "reported_list_cost_usd": null,
+      "artifact_files": 8,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 14,
+      "chart_count": 5,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09",
+          "A10"
+        ],
+        "missed": [
+          "A01"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01",
+          "L02",
+          "L03"
+        ],
+        "unmatched_findings": 1,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 10,
+        "unsupported": 2,
+        "unverifiable": 48,
+        "checked_fraction": 0.2
+      }
+    },
+    {
+      "implementation": "managed",
+      "run": "rep-1",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 234.893,
+      "model_calls": 20,
+      "tool_calls": 24,
+      "input_tokens": 42,
+      "output_tokens": 28714,
+      "cache_read_tokens": 616725,
+      "cache_write_tokens": 64320,
+      "peak_context_tokens": null,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.5097,
+      "runtime_cost_usd": 0.0052,
+      "total_cost_usd": 0.5149,
+      "reported_list_cost_usd": 0.51,
+      "artifact_files": 8,
+      "schema_valid": false,
+      "required_artifacts_complete": false,
+      "finding_count": 14,
+      "chart_count": 5,
+      "analysis_py_runs": true,
+      "detection": null,
+      "numeric_claims": null
+    },
+    {
+      "implementation": "managed",
+      "run": "rep-2",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 270.511,
+      "model_calls": 22,
+      "tool_calls": 25,
+      "input_tokens": 46,
+      "output_tokens": 33485,
+      "cache_read_tokens": 738523,
+      "cache_write_tokens": 60006,
+      "peak_context_tokens": null,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.5588,
+      "runtime_cost_usd": 0.006,
+      "total_cost_usd": 0.5648,
+      "reported_list_cost_usd": 0.56,
+      "artifact_files": 10,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 13,
+      "chart_count": 7,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01"
+        ],
+        "unmatched_findings": 0,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 2,
+        "unsupported": 0,
+        "unverifiable": 79,
+        "checked_fraction": 0.025
+      }
+    },
+    {
+      "implementation": "managed",
+      "run": "rep-3",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 201.104,
+      "model_calls": 13,
+      "tool_calls": 14,
+      "input_tokens": 28,
+      "output_tokens": 25318,
+      "cache_read_tokens": 302790,
+      "cache_write_tokens": 50948,
+      "peak_context_tokens": null,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.4109,
+      "runtime_cost_usd": 0.0045,
+      "total_cost_usd": 0.4154,
+      "reported_list_cost_usd": 0.42,
+      "artifact_files": 7,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 14,
+      "chart_count": 4,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01",
+          "L02"
+        ],
+        "unmatched_findings": 3,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 4,
+        "unsupported": 2,
+        "unverifiable": 55,
+        "checked_fraction": 0.098
+      }
+    },
+    {
+      "implementation": "managed",
+      "run": "rep-4",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 309.747,
+      "model_calls": 23,
+      "tool_calls": 29,
+      "input_tokens": 48,
+      "output_tokens": 40067,
+      "cache_read_tokens": 1007541,
+      "cache_write_tokens": 73404,
+      "peak_context_tokens": null,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.685,
+      "runtime_cost_usd": 0.0069,
+      "total_cost_usd": 0.6919,
+      "reported_list_cost_usd": 0.69,
+      "artifact_files": 10,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 13,
+      "chart_count": 6,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 9,
+        "injected_recall": 0.9,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A10"
+        ],
+        "missed": [
+          "A09"
+        ],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01"
+        ],
+        "unmatched_findings": 1,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 8,
+        "unsupported": 3,
+        "unverifiable": 69,
+        "checked_fraction": 0.138
+      }
+    },
+    {
+      "implementation": "managed",
+      "run": "rep-5",
+      "model": "claude-sonnet-5-5",
+      "status": "completed",
+      "completed": true,
+      "active_seconds": 325.009,
+      "model_calls": 26,
+      "tool_calls": 28,
+      "input_tokens": 54,
+      "output_tokens": 41372,
+      "cache_read_tokens": 1037472,
+      "cache_write_tokens": 82641,
+      "peak_context_tokens": null,
+      "infrastructure_errors": 0,
+      "token_cost_usd": 0.7242,
+      "runtime_cost_usd": 0.0072,
+      "total_cost_usd": 0.7314,
+      "reported_list_cost_usd": 0.73,
+      "artifact_files": 9,
+      "schema_valid": true,
+      "required_artifacts_complete": true,
+      "finding_count": 14,
+      "chart_count": 6,
+      "analysis_py_runs": true,
+      "detection": {
+        "injected_total": 10,
+        "injected_detected": 10,
+        "injected_recall": 1.0,
+        "detected": [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09",
+          "A10"
+        ],
+        "missed": [],
+        "ambiguous_detected": [
+          "A11"
+        ],
+        "legit_patterns_mentioned": [
+          "L01",
+          "L02",
+          "L03"
+        ],
+        "unmatched_findings": 0,
+        "legit_patterns_flagged_as_problems": 0
+      },
+      "numeric_claims": {
+        "supported": 8,
+        "unsupported": 2,
+        "unverifiable": 57,
+        "checked_fraction": 0.149
+      }
+    }
+  ],
+  "aggregate": {
+    "diy": {
+      "runs": 5,
+      "completed": 5,
+      "required_artifacts_complete": 5,
+      "schema_valid": 5,
+      "analysis_py_runs": 5,
+      "injected_recall": {
+        "mean": 0.88,
+        "min": 0.8,
+        "max": 0.9,
+        "n": 5,
+        "missing": 0
+      },
+      "findings": {
+        "mean": 13,
+        "min": 12,
+        "max": 14,
+        "n": 5,
+        "missing": 0
+      },
+      "unmatched_findings": {
+        "mean": 1.2,
+        "min": 0,
+        "max": 2,
+        "n": 5,
+        "missing": 0
+      },
+      "legit_flagged_as_problems": {
+        "mean": 0,
+        "min": 0,
+        "max": 0,
+        "n": 5,
+        "missing": 0
+      },
+      "claims_supported": {
+        "mean": 7.4,
+        "min": 2,
+        "max": 11,
+        "n": 5,
+        "missing": 0
+      },
+      "claims_unsupported": {
+        "mean": 1.6,
+        "min": 0,
+        "max": 4,
+        "n": 5,
+        "missing": 0
+      },
+      "claims_unverifiable": {
+        "mean": 42.2,
+        "min": 30,
+        "max": 52,
+        "n": 5,
+        "missing": 0
+      },
+      "active_seconds": {
+        "mean": 183.52,
+        "min": 167.5,
+        "max": 207.3,
+        "n": 5,
+        "missing": 0
+      },
+      "model_calls": {
+        "mean": 17.4,
+        "min": 15,
+        "max": 20,
+        "n": 5,
+        "missing": 0
+      },
+      "tool_calls": {
+        "mean": 17.8,
+        "min": 15,
+        "max": 21,
+        "n": 5,
+        "missing": 0
+      },
+      "input_tokens": {
+        "mean": 36.8,
+        "min": 32,
+        "max": 42,
+        "n": 5,
+        "missing": 0
+      },
+      "output_tokens": {
+        "mean": 22630.2,
+        "min": 19935,
+        "max": 26120,
+        "n": 5,
+        "missing": 0
+      },
+      "cache_read_tokens": {
+        "mean": 366702.6,
+        "min": 260331,
+        "max": 525734,
+        "n": 5,
+        "missing": 0
+      },
+      "cache_write_tokens": {
+        "mean": 44744.6,
+        "min": 38729,
+        "max": 54816,
+        "n": 5,
+        "missing": 0
+      },
+      "token_cost_usd": {
+        "mean": 0.375,
+        "min": 0.3308,
+        "max": 0.4509,
+        "n": 5,
+        "missing": 0
+      },
+      "runtime_cost_usd": {
+        "n": 0,
+        "missing": 5
+      },
+      "total_cost_usd": {
+        "mean": 0.375,
+        "min": 0.3308,
+        "max": 0.4509,
+        "n": 5,
+        "missing": 0
+      },
+      "infrastructure_errors": {
+        "mean": 0,
+        "min": 0,
+        "max": 0,
+        "n": 5,
+        "missing": 0
+      },
+      "detected_by_anomaly": {
+        "A01": 4,
+        "A02": 5,
+        "A03": 5,
+        "A04": 5,
+        "A05": 5,
+        "A06": 5,
+        "A07": 5,
+        "A08": 4,
+        "A09": 1,
+        "A10": 5
+      }
+    },
+    "managed": {
+      "runs": 5,
+      "completed": 5,
+      "required_artifacts_complete": 4,
+      "schema_valid": 4,
+      "analysis_py_runs": 5,
+      "injected_recall": {
+        "mean": 0.925,
+        "min": 0.9,
+        "max": 1.0,
+        "n": 4,
+        "missing": 1
+      },
+      "findings": {
+        "mean": 13.6,
+        "min": 13,
+        "max": 14,
+        "n": 5,
+        "missing": 0
+      },
+      "unmatched_findings": {
+        "mean": 1,
+        "min": 0,
+        "max": 3,
+        "n": 4,
+        "missing": 1
+      },
+      "legit_flagged_as_problems": {
+        "mean": 0,
+        "min": 0,
+        "max": 0,
+        "n": 4,
+        "missing": 1
+      },
+      "claims_supported": {
+        "mean": 5.5,
+        "min": 2,
+        "max": 8,
+        "n": 4,
+        "missing": 1
+      },
+      "claims_unsupported": {
+        "mean": 1.75,
+        "min": 0,
+        "max": 3,
+        "n": 4,
+        "missing": 1
+      },
+      "claims_unverifiable": {
+        "mean": 65,
+        "min": 55,
+        "max": 79,
+        "n": 4,
+        "missing": 1
+      },
+      "active_seconds": {
+        "mean": 268.253,
+        "min": 201.104,
+        "max": 325.009,
+        "n": 5,
+        "missing": 0
+      },
+      "model_calls": {
+        "mean": 20.8,
+        "min": 13,
+        "max": 26,
+        "n": 5,
+        "missing": 0
+      },
+      "tool_calls": {
+        "mean": 24,
+        "min": 14,
+        "max": 29,
+        "n": 5,
+        "missing": 0
+      },
+      "input_tokens": {
+        "mean": 43.6,
+        "min": 28,
+        "max": 54,
+        "n": 5,
+        "missing": 0
+      },
+      "output_tokens": {
+        "mean": 33791.2,
+        "min": 25318,
+        "max": 41372,
+        "n": 5,
+        "missing": 0
+      },
+      "cache_read_tokens": {
+        "mean": 740610.2,
+        "min": 302790,
+        "max": 1037472,
+        "n": 5,
+        "missing": 0
+      },
+      "cache_write_tokens": {
+        "mean": 66263.8,
+        "min": 50948,
+        "max": 82641,
+        "n": 5,
+        "missing": 0
+      },
+      "token_cost_usd": {
+        "mean": 0.578,
+        "min": 0.4109,
+        "max": 0.7242,
+        "n": 5,
+        "missing": 0
+      },
+      "runtime_cost_usd": {
+        "mean": 0.006,
+        "min": 0.0045,
+        "max": 0.0072,
+        "n": 5,
+        "missing": 0
+      },
+      "total_cost_usd": {
+        "mean": 0.584,
+        "min": 0.4154,
+        "max": 0.7314,
+        "n": 5,
+        "missing": 0
+      },
+      "infrastructure_errors": {
+        "mean": 0,
+        "min": 0,
+        "max": 0,
+        "n": 5,
+        "missing": 0
+      },
+      "detected_by_anomaly": {
+        "A01": 4,
+        "A02": 4,
+        "A03": 4,
+        "A04": 4,
+        "A05": 4,
+        "A06": 4,
+        "A07": 4,
+        "A08": 4,
+        "A09": 1,
+        "A10": 4
+      }
+    }
+  }
+}

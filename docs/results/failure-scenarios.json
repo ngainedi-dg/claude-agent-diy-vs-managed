@@ -1,0 +1,153 @@
+{
+  "syntax_error": {
+    "diy": {
+      "status": "completed",
+      "result_txt": "OK",
+      "expected_result": "OK",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 6.6,
+      "cost_usd": 0.0066
+    },
+    "managed": {
+      "status": "completed",
+      "result_txt": "OK",
+      "expected_result": "OK",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "infrastructure_errors": 0,
+      "active_seconds": 6.725,
+      "cost_usd": 0.0061
+    }
+  },
+  "missing_file": {
+    "diy": {
+      "status": "completed",
+      "result_txt": "MISSING",
+      "expected_result": "MISSING",
+      "model_calls": 4,
+      "tool_calls": 3,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 7.7,
+      "cost_usd": 0.0084
+    },
+    "managed": {
+      "status": "completed",
+      "result_txt": "MISSING",
+      "expected_result": "MISSING",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "infrastructure_errors": 0,
+      "active_seconds": 62.814,
+      "cost_usd": 0.0076
+    }
+  },
+  "tool_timeout": {
+    "diy": {
+      "status": "completed",
+      "result_txt": "TIMEOUT",
+      "expected_result": "TIMEOUT",
+      "model_calls": 4,
+      "tool_calls": 3,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 304.6,
+      "cost_usd": 0.0173
+    },
+    "managed": {
+      "status": "completed",
+      "result_txt": "TIMEOUT",
+      "expected_result": "TIMEOUT",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "infrastructure_errors": 0,
+      "active_seconds": 301.924,
+      "cost_usd": 0.023
+    }
+  },
+  "tool_error": {
+    "diy": {
+      "status": "completed",
+      "result_txt": "2",
+      "expected_result": "2",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 6.2,
+      "cost_usd": 0.006
+    },
+    "managed": {
+      "status": "completed",
+      "result_txt": "2",
+      "expected_result": "2",
+      "model_calls": 3,
+      "tool_calls": 2,
+      "infrastructure_errors": 0,
+      "active_seconds": 6.316,
+      "cost_usd": 0.005
+    }
+  },
+  "budget_limit": {
+    "diy": {
+      "status": "budget_exhausted",
+      "result_txt": null,
+      "model_calls": 5,
+      "tool_calls": 5,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 21.7,
+      "cost_usd": 0.0503
+    },
+    "managed": {
+      "status": "budget_exhausted",
+      "result_txt": null,
+      "model_calls": 4,
+      "tool_calls": 4,
+      "infrastructure_errors": 0,
+      "active_seconds": 24.79,
+      "cost_usd": 0.0594
+    }
+  },
+  "iteration_limit": {
+    "diy": {
+      "status": "max_iterations",
+      "result_txt": null,
+      "model_calls": 3,
+      "tool_calls": 3,
+      "tool_calls_with_error_result": 1,
+      "infrastructure_errors": 0,
+      "active_seconds": 10.8,
+      "cost_usd": 0.0151
+    },
+    "managed": {
+      "not_applicable": true
+    }
+  },
+  "client_interrupted": {
+    "diy": {
+      "status": "completed",
+      "result_txt": null,
+      "model_calls": 17,
+      "tool_calls": 20,
+      "tool_calls_with_error_result": 2,
+      "infrastructure_errors": 0,
+      "active_seconds": 177.8,
+      "cost_usd": 0.3511,
+      "killed_after_tool_calls": 6
+    },
+    "managed": {
+      "status": "completed",
+      "result_txt": null,
+      "model_calls": 17,
+      "tool_calls": 21,
+      "infrastructure_errors": 0,
+      "active_seconds": 235.598,
+      "cost_usd": 0.4874,
+      "killed_after_tool_calls": 7
+    }
+  }
+}

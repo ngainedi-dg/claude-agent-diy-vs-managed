@@ -43,7 +43,7 @@ LOC is not like for like: DIY includes crash recovery (`sessions.py`) Managed do
 
 ## 4. Experimental results
 
-**Main experiment:** 10 runs (5 per side), same task text and model, alternating order, 00:45-01:25 IST. Source: `results/experiment-1/report.json` (not committed; `results/` is gitignored).
+**Main experiment:** 10 runs (5 per side), same task text and model, alternating order, 00:45-01:25 IST. Source: `docs/results/experiment-1.json` (metrics only; raw runs are not committed).
 
 | | DIY | Managed |
 |---|---|---|
@@ -109,19 +109,19 @@ Both interrupted runs scored recall 0.9 and valid artifacts. We did not measure 
 
 - https://github.com/ngainedi-dg/claude-agent-diy-vs-managed. **Phases 0-4 are pushed; Phase 5 tooling, the experiment runners, the log correction and this file were local-only when written.**
 - Inspect: `docs/engineering-log.md`, `diy/agent_loop.py`, `diy/sandbox.py`, `diy/sessions.py`, `managed/main.py`, `managed/agent.md`, `evaluation/claims.py`, `experiments/run_comparison.py`.
-- Reproduce (Docker, `uv`, API key with Managed Agents access in `.env.local`; on WSL set `UV_PROJECT_ENVIRONMENT` to a Linux path): `uv sync`; `uv run python task/generate_data.py --seed 42`; `uv run pytest` (153 tests, no API calls); `uv run python -m experiments.run_comparison --repetitions 5 --yes` (about $5); `uv run python -m experiments.failure_scenarios --yes` (about $1.50); `--report-only` rebuilds reports free. Managed runs create a real agent, environment and sessions in your account.
+- Reproduce (Docker, `uv`, API key with Managed Agents access in `.env.local`; on WSL set `UV_PROJECT_ENVIRONMENT` to a Linux path): `uv sync`; `uv run python task/generate_data.py --seed 42`; `uv run pytest` (156 tests, no API calls); `uv run python -m experiments.run_comparison --repetitions 5 --yes` (about $5); `uv run python -m experiments.failure_scenarios --yes` (about $1.50); `--report-only` rebuilds reports free. Managed runs create a real agent, environment and sessions in your account.
 
 ## 9. Evidence and confidence
 
 | Claim | Source |
 |---|---|
 | LOC, file counts | `experiments/loc.py` |
-| 47 / 19 test functions; 153 total | `tests/`; `pytest --collect-only` |
-| Medians, ranges, completion, rerun counts | `results/experiment-1/report.json` |
+| 47 / 19 test functions; 156 total | `tests/`; `pytest --collect-only` |
+| Medians, ranges, completion, rerun counts | `docs/results/experiment-1.json` |
 | Tool mix (DIY: execute_python 77, write_file 7, run_command 4, list_files 1) | managed `trace.jsonl`, DIY `session.sqlite` |
 | Peak prompt 54,818; 0 compactions; 0 errors in 568 events | DIY `run.json`; managed traces |
-| Scenario outcomes, timings, costs | `results/failures/failure-report.md` and traces |
+| Scenario outcomes, timings, costs | `docs/results/failure-scenarios.json`; who handled each failure is from local traces |
 | $0.60 reported vs $0.68 estimated | log, Phase 4 |
 | Timeline | git commit times, session timestamps |
 
-**Missing or weak:** per-component effort, human hours, DIY compute cost, Managed peak context, whether Managed kept working while disconnected. **Small samples:** n=5 per side for the experiment, n=1 per scenario; one task, dataset and model; no significance testing. **Not equivalent:** tools, sandbox size, iteration limits, caching control, and the fault-injection method. **Evaluator limits:** rule-based matching (one false negative fixed after seeing results, all runs re-scored by the same rule); most numeric claims unverifiable. **Process note:** raw results are not committed, so these numbers are reproducible by rerunning, not by reading data.
+**Missing or weak:** per-component effort, human hours, DIY compute cost, Managed peak context, whether Managed kept working while disconnected. **Small samples:** n=5 per side for the experiment, n=1 per scenario; one task, dataset and model; no significance testing. **Not equivalent:** tools, sandbox size, iteration limits, caching control, and the fault-injection method. **Evaluator limits:** rule-based matching (one false negative fixed after seeing results, all runs re-scored by the same rule); most numeric claims unverifiable. **Process note:** raw runs are not committed. Per-run metrics are in `docs/results/`; the tool-mix, compaction and event counts and the fault-scenario judgements came from local traces.

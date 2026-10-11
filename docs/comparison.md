@@ -1,6 +1,6 @@
 # DIY vs. Managed Agents: comparison
 
-Evidence for every number is listed at the end. Raw run results are not committed; they are reproducible with `uv run python -m experiments.run_comparison` (see the README). Sample sizes are small (5 runs per side, 1 per fault scenario), so differences are indicative, not statistically established.
+Evidence for every number is listed at the end. Raw runs (agents' reports, findings and traces) are not committed. A metrics-only summary is in [results/](results/): per-run numbers and statuses, no agent-written text or IDs. Everything is reproducible with `uv run python -m experiments.run_comparison` (see the README). Sample sizes are small (5 runs per side, 1 per fault scenario), so differences are indicative, not statistically established.
 
 ## 1. Infrastructure responsibilities
 
@@ -93,8 +93,8 @@ Both interrupted runs completed with recall 0.9. We did not measure whether the 
 | Claim | Where |
 |---|---|
 | LOC, files | `uv run python -m experiments.loc` |
-| Test counts | `tests/`, `pytest --collect-only` (153 total) |
-| Experiment medians, ranges, completion, reruns | `results/experiment-1/report.json` (local) |
-| Tool mix, peak prompt, compaction and error counts | per-run `trace.jsonl`, `session.sqlite`, `run.json` (local) |
-| Fault scenarios | `results/failures/failure-report.md` and traces (local) |
+| Test counts | `tests/`, `pytest --collect-only` (156 total) |
+| Experiment medians, ranges, completion, reruns | [results/experiment-1.json](results/experiment-1.json), [experiment-1.md](results/experiment-1.md) |
+| Tool call counts, peak prompt, error counts | [results/experiment-1.json](results/experiment-1.json). The tool mix by tool name, compaction count and event counts came from local traces, which are not committed. |
+| Fault scenarios | [results/failure-scenarios.json](results/failure-scenarios.json), [failure-scenarios.md](results/failure-scenarios.md). Who handled each failure comes from local traces. |
 | Bugs, corrections, timeline | [engineering-log.md](engineering-log.md) |

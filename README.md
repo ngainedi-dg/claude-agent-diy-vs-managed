@@ -46,7 +46,7 @@ Details, evidence and the limits of these comparisons are in [docs/comparison.md
 
 ## Limitations
 
-One task, one dataset, one model, five runs per side. The two sides are not identical tests: different toolsets, sandbox sizes and iteration limits. **Development time per component was not tracked**; only wall-clock time between commits exists, and it includes waiting. Raw run results are not committed (`results/` is gitignored), so the numbers above are reproducible by rerunning, not by reading data. Managed Agents is a beta service and may change.
+One task, one dataset, one model, five runs per side. The two sides are not identical tests: different toolsets, sandbox sizes and iteration limits. **Development time per component was not tracked**; only wall-clock time between commits exists, and it includes waiting. Raw runs (agents' reports, findings, traces) are not committed; a metrics-only summary of every run is in [docs/results/](docs/results/), and the numbers above are reproducible by rerunning. Managed Agents is a beta service and may change.
 
 ## Run it
 
@@ -55,7 +55,7 @@ You need Docker, [uv](https://docs.astral.sh/uv/), and an Anthropic API key with
 ```bash
 uv sync
 uv run python task/generate_data.py --seed 42        # dataset and answer key
-uv run pytest                                        # 153 tests, no API calls
+uv run pytest                                        # 156 tests, no API calls
 
 uv run python -m diy.main --task task/instructions.md --dry-run   # sandbox check, free
 uv run python -m managed.main --task task/instructions.md --dry-run   # creates the agent and environment, runs nothing
@@ -67,6 +67,7 @@ uv run python -m evaluation.evaluate --results results/ --run-analysis
 uv run python -m experiments.run_comparison --repetitions 5 --yes # paid, about $5
 uv run python -m experiments.failure_scenarios --yes              # paid, about $1.50
 uv run python -m experiments.run_comparison --report-only         # rebuild the report, free
+uv run python -m experiments.export_results                       # metrics-only summary into docs/results/
 ```
 
 The two experiment runners print an estimate and need `--yes`. The single-run commands start spending as soon as they run; each has a cost cap (default $3.00). On WSL with the repository on the Windows drive, set `UV_PROJECT_ENVIRONMENT` to a path on the Linux filesystem; it cut test time from about 90 seconds to about 4.
@@ -82,6 +83,6 @@ The managed run creates a real agent, environment and sessions in your Anthropic
 | `managed/` | agent and environment definitions, the client |
 | `evaluation/` | answer-key matching, numeric-claim check, metrics, analysis re-run |
 | `experiments/` | repeated-run and fault-injection runners, LOC counter |
-| `docs/` | brief, architecture, comparison, findings, engineering log |
+| `docs/` | brief, architecture, comparison, findings, engineering log; `docs/results/` holds metrics-only run data |
 
 The [engineering log](docs/engineering-log.md) was written as the work happened, including corrections to earlier entries. Read it for what went wrong, not only what was built.
