@@ -154,3 +154,17 @@ Approved by the user before running: one run on `claude-sonnet-5-5`, $3.00 cap.
 **Infrastructure implemented for the DIY agent that Managed Agents is expected to provide (to be confirmed in Phase 4):** the agent loop, tool dispatch and argument validation, the sandbox (isolation flags, limits, timeouts, zombie reaping), session persistence and crash recovery, API retry policy, token and cost accounting, execution tracing.
 
 **Time spent on Phase 3:** about 5h (estimate), of which roughly 1h was the two sandbox bugs and one serialisation round-trip check.
+
+### Phase 3 validation: real run, SIGKILL, resume (`results/diy/run-002`)
+
+Approved by the user before running: one run plus one resume, $1.50 combined cap.
+
+- The client was killed with `kill -9` after 6 tool calls. The session was left as `running` with 5 calls `done` and 1 `started` (the kill landed while a call was in flight).
+- `--resume` started a new container on the same workspace. The `started` call was **not** re-run; the model received the "outcome unknown" result and carried on. The run then completed at iteration 20.
+- The API accepted the history rebuilt from SQLite (including any thinking blocks), so the `exclude_unset` serialisation works against the real API.
+- Whole interrupted-and-resumed run: 20 model calls, 190 s of active time, $0.41, peak prompt 41,949 tokens (nowhere near the 1M window, so no context compaction was needed). The cost matches the uninterrupted run-001 ($0.39) closely; resume did not add a visible penalty.
+- Evaluator: valid schema, all artifacts, 15 findings, **10 of 10** injected entries matched including A01, which run-001 missed. Two runs is not a result, but it does show the run-to-run variation the 5-run stage is meant to measure.
+
+**Found:** SIGKILL leaves the container running. The loop's cleanup never ran, so one `diy-agent-*` container was orphaned and I removed it by hand. A managed runtime owns its own container lifecycle; for the DIY agent, a reaper (label containers, remove stale ones at startup) is another piece we would have to write. Not built, because the experiment doesn't need it, but it belongs in the comparison.
+
+**Phase 3 acceptance:** met. The DIY agent completes the task with generated code running only in Docker, with sessions, structured traces, error handling and tested recovery.
