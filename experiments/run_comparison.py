@@ -46,7 +46,7 @@ def launch(impl: str, run_dir: Path, a) -> int:
         cmd += ["--model", a.model, "--max-iterations", str(a.max_iterations)]
     run_dir.parent.mkdir(parents=True, exist_ok=True)
     with (run_dir.parent / f"{run_dir.name}.log").open("w", encoding="utf-8") as log:
-        return subprocess.run(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT).returncode
+        return subprocess.run(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT).returncode
 
 
 def run_experiment(a) -> None:

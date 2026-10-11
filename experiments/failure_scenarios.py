@@ -54,7 +54,7 @@ MICRO_TASKS = {
 def run_main(impl: str, args: list[str], timeout_s: int) -> int:
     cmd = [sys.executable, "-m", f"{impl}.main", *args]
     try:
-        return subprocess.run(cmd, cwd=ROOT, capture_output=True, timeout=timeout_s).returncode
+        return subprocess.run(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout_s).returncode
     except subprocess.TimeoutExpired:
         return -1
 
@@ -137,7 +137,7 @@ def run_interrupted(impl: str, out: Path, kill_after: int = 6) -> None:
         return
     proc = subprocess.Popen([sys.executable, "-m", f"{impl}.main", "--task", str(ROOT / "task" / "instructions.md"),
                              "--out", str(run_dir), "--max-cost", "3.00"], cwd=ROOT,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     deadline = time.monotonic() + 900
     while proc.poll() is None and progress(impl, run_dir) < kill_after and time.monotonic() < deadline:
         time.sleep(2)

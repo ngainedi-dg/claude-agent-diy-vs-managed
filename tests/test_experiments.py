@@ -4,6 +4,7 @@ import json
 import re
 import sqlite3
 from argparse import Namespace
+from types import SimpleNamespace
 
 import pytest
 
@@ -193,3 +194,18 @@ def test_every_scenario_in_the_brief_is_covered():
     # brief section 9.4: syntax error, missing file, timeout, tool error, interrupted client, limits, multi-round
     assert set(fs.MICRO_TASKS) == {"syntax_error", "missing_file", "tool_timeout", "tool_error"}
     assert "client_interrupted" in fs.__doc__ and "budget_limit" in fs.__doc__ and "multiple-rounds" in fs.__doc__
+
+
+def test_child_processes_never_inherit_stdin(tmp_path, monkeypatch):
+    """Found in the real experiment: a child that inherits stdin can swallow the rest of a script piped to the shell."""
+    seen = []
+
+    def fake_run(cmd, **kwargs):
+        seen.append(kwargs.get("stdin"))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(rc.subprocess, "run", fake_run)
+    monkeypatch.setattr(fs.subprocess, "run", fake_run)
+    rc.launch("diy", tmp_path / "rep-1", args(tmp_path))
+    fs.run_main("diy", ["--help"], timeout_s=5)
+    assert seen == [rc.subprocess.DEVNULL, rc.subprocess.DEVNULL]
