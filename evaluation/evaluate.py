@@ -60,16 +60,22 @@ def canonical_metric(name: str) -> str:
 
 
 def check_numeric_claims(findings: list[dict], df: pd.DataFrame | None) -> dict:
-    """Compare evidence values the evaluator can recompute. Everything else is unverifiable, not wrong."""
+    """Compare evidence values the evaluator can recompute. Everything else is unverifiable, not wrong.
+
+    Only dataset-wide findings (empty segment) are checked: a metric called "row_count" inside a
+    finding about six transactions means six, not the size of the file.
+    """
     if df is None:
         return {"available": False}
     truth = recompute_metrics(df)
     correct, incorrect, unverifiable = [], [], 0
     for f in findings:
+        dataset_wide = not f.get("segment")
         for item in f.get("evidence", []):
             key = canonical_metric(str(item.get("metric", "")))
             value = item.get("value")
-            if key not in truth or isinstance(value, bool) or not isinstance(value, (int, float)):
+            if (not dataset_wide or key not in truth or isinstance(value, bool)
+                    or not isinstance(value, (int, float))):
                 unverifiable += 1
                 continue
             tol = max(0.01 * abs(truth[key]), 0.5)

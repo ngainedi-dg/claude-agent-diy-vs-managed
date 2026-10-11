@@ -151,6 +151,13 @@ DF = pd.DataFrame({"transaction_id": ["T1", "T2", "T2"], "revenue": [100.0, 200.
                    "customer_id": ["C1", "C2", "C2"], "product_id": ["P1", "P1", "P1"]})
 
 
+def test_segment_scoped_findings_are_not_checked_against_the_whole_file():
+    # Found in the first real run: "row_count: 6" in a finding about six transactions is not a claim about the file.
+    scoped = finding(segment={"transaction_ids": ["T1"]}, evidence=[{"metric": "row_count", "value": 6}])
+    r = check_numeric_claims([scoped], DF)
+    assert (r["verified_correct"], r["verified_incorrect"], r["unverifiable"]) == (0, 0, 1)
+
+
 def test_numeric_claims_split_correct_incorrect_unverifiable():
     f = finding(evidence=[
         {"metric": "Total Revenue", "value": 500.0},       # correct

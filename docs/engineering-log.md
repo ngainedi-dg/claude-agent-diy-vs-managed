@@ -101,3 +101,28 @@ The brief schedules the sandbox in Phase 3 and allows a simpler executor in Phas
 
 **Infrastructure avoided through Managed Agents:** not applicable yet.
 **Time spent:** about 3h (estimate), including the Docker work pulled forward.
+
+### Phase 2 result: first paid DIY run (`results/diy/run-001`, not committed; `results/` is ignored)
+
+Approved by the user before running: one run on `claude-sonnet-5-5`, $3.00 cap.
+
+| Measure | Value |
+|---|---|
+| Status | completed (`end_turn`) |
+| Model calls / tool calls | 17 / 17 (one error, recovered on the next turn) |
+| Duration | 174.5 s |
+| Tokens | 36 uncached input, 22,216 output, 41,344 cache write, 303,444 cache read |
+| Estimated cost | $0.39 (projection for a 12-turn run was $0.26, for 25 turns $0.89) |
+| Artifacts | `report.md`, `analysis.py`, 6 charts, valid `summary.json` with 15 findings |
+
+**Acceptance:** met. Claude wrote Python, ran it, read the output, hit a Python error on turn 2, fixed it, and decided for itself when to stop. Prompt caching worked first time (`cache_control` accepted). `analysis.py` re-ran offline in a fresh container against the original CSV (exit 0, regenerated all charts and `summary.json`).
+
+**Evaluator result (single run, so anecdote, not a finding):** 9 of 10 injected anomalies/defects matched (A02-A10), A11 (ambiguous) also matched. **A01 (West decline) was missed**: the report says regional shares "are stable month to month", so this is a real miss, not a matcher gap. All three legitimate patterns were mentioned. One legitimate pattern (Home & Garden, F10) counted as "flagged as a problem" because the agent set `further_investigation_recommended` while calling it consistent with seasonality; that is a judgement call and the heuristic is crude. Three findings matched nothing and are real extra trends (a large customer, category mix, weekday pattern), not false positives.
+
+**Evaluator problems found by running it on real output**
+- The numeric-claim check marked `row_count: 6` as incorrect inside a finding about six transactions. The metric name was about the segment, not the file. Fixed: only dataset-wide findings (empty segment) are checked.
+- After the fix, 0 of 67 evidence values were verifiable, because the agent used its own metric names (`revenue_Electronics`, `orders_monday`). The numeric-claims check is nearly empty for free-form evidence. Phase 5 needs either a way to recompute segment-scoped numbers or a different approach; I have not decided which.
+
+**Not changed on purpose:** I did not tune the dataset to make A01 easier after seeing this result. Whether a 45% drop in West transactions over 2.5 months is findable is a property of the benchmark and should be judged on all runs, not one.
+
+**Time spent on Phase 2 including the run and its analysis:** about 4h (estimate).
