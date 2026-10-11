@@ -193,7 +193,7 @@ def test_usage_and_cost_accounting():
     u.add(FakeUsage(1000, 100, 200, 5000))
     u.add(FakeUsage(10, 5, 0, 100))
     assert u.model_calls == 2 and u.peak_context_tokens == 6200
-    assert cost_usd(u, MODEL) == pytest.approx((1010 * 2 + 105 * 10 + 200 * 2.5 + 5100 * 0.2) / 1e6)
+    assert cost_usd(u, MODEL) == pytest.approx((1010 * 2 + 105 * 10 + 200 * 2.5 + 5100 * 0.1) / 1e6)
 
 
 # --- API failures ----------------------------------------------------------

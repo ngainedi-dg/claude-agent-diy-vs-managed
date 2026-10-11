@@ -98,6 +98,14 @@ def test_rich_findings_are_detected(truth):
     assert s["unmatched_findings"] == []
 
 
+def test_a_short_window_on_the_spike_dates_matches_whatever_word_the_agent_used(truth):
+    # Found in a real run: "burst" was not among the keywords, so a correct finding was scored as a miss.
+    f = finding("F9", "A three-day burst: 406 transactions vs a median of 25 a day", {"date_range": ["2025-06-14", "2025-06-16"]})
+    assert "A03" in score_findings([f], truth)["detected"]
+    wide = finding("F9", "June was busy", {"date_range": ["2025-06-01", "2025-06-30"]})
+    assert "A03" not in score_findings([wide], truth)["detected"]
+
+
 def test_unmatched_finding_is_reported(truth):
     s = score_findings([finding("F9", "Tuesdays are slightly busier than Wednesdays")], truth)
     assert s["unmatched_findings"] == ["F9"]

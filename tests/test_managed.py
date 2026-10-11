@@ -223,7 +223,8 @@ class FakeFiles:
         self.beta = SimpleNamespace(files=self)
 
     def list(self, scope_id, betas):
-        return [SimpleNamespace(id=f"f{i}", filename=n) for i, n in enumerate(self.names)]
+        files = [SimpleNamespace(id=f"f{i}", filename=n, downloadable=True) for i, n in enumerate(self.names)]
+        return files + [SimpleNamespace(id="input", filename="sales_transactions.csv", downloadable=False)]
 
     def download(self, file_id):
         def write_to_file(path):
@@ -231,18 +232,20 @@ class FakeFiles:
         return SimpleNamespace(write_to_file=write_to_file)
 
 
-def test_downloads_keep_directory_structure_and_refuse_unsafe_names(tmp_path, monkeypatch):
+def test_downloads_skip_the_input_file_rebuild_charts_and_refuse_unsafe_names(tmp_path, monkeypatch):
+    # Found in the first real run: the listing returns bare file names (directories are dropped) and also
+    # contains the uploaded input, which cannot be downloaded.
     monkeypatch.setattr(mm.time, "sleep", lambda s: None)
-    names = ["report.md", "/mnt/session/outputs/charts/a.png", "../escape.txt", "/etc/passwd"]
+    names = ["report.md", "01_trend.png", "/mnt/session/outputs/charts/b.jpg", "../escape.txt", "summary.json"]
     saved = mm.download_outputs(FakeFiles(names), "s", tmp_path / "out", log=lambda *_: None)
-    assert saved == ["report.md", "charts/a.png", "etc/passwd"] or saved == ["report.md", "charts/a.png"]
-    assert (tmp_path / "out" / "charts" / "a.png").is_file()
-    assert not (tmp_path / "escape.txt").exists()
+    assert saved == ["report.md", "charts/01_trend.png", "charts/b.jpg", "summary.json"]
+    assert (tmp_path / "out" / "charts" / "01_trend.png").is_file()
+    assert not (tmp_path / "escape.txt").exists() and not (tmp_path / "out" / "sales_transactions.csv").exists()
 
 
 def test_metrics_mark_missing_values_as_unavailable_not_zero():
     run = mm.RunState()
-    partial = SimpleNamespace(input_tokens=1_000_000, output_tokens=None, cache_creation_input_tokens=0,
+    partial = SimpleNamespace(input_tokens=1_000_000, output_tokens=None, cache_creation=None,
                               cache_read_input_tokens=0, active_seconds=None)
     m = mm.metrics(SimpleNamespace(usage=partial), run, "claude-sonnet-5-5")
     assert m["estimated_token_cost_usd"] is None and m["estimated_runtime_cost_usd"] is None
@@ -250,12 +253,24 @@ def test_metrics_mark_missing_values_as_unavailable_not_zero():
 
 
 def test_metrics_cost_arithmetic():
-    usage = SimpleNamespace(input_tokens=1000, output_tokens=100, cache_creation_input_tokens=200,
-                            cache_read_input_tokens=5000, active_seconds=3600,
+    usage = SimpleNamespace(input_tokens=1000, output_tokens=100, cache_read_input_tokens=5000, active_seconds=3600,
+                            cache_creation=SimpleNamespace(ephemeral_5m_input_tokens=200, ephemeral_1h_input_tokens=50),
                             list_cost=SimpleNamespace(amount="41", currency="USD"))
-    m = mm.metrics(SimpleNamespace(usage=usage), mm.RunState(), "claude-sonnet-5-5")
-    assert m["estimated_token_cost_usd"] == pytest.approx((1000 * 2 + 100 * 10 + 200 * 2.5 + 5000 * 0.2) / 1e6, abs=1e-4)
+    session = SimpleNamespace(usage=usage)
+    m = mm.metrics(session, mm.RunState(), "claude-sonnet-5-5")
+    expected = (1000 * 2 + 100 * 10 + 200 * 2.5 + 50 * 4 + 5000 * 0.1) / 1e6  # 1-hour cache writes cost 2x input
+    assert m["estimated_token_cost_usd"] == pytest.approx(expected, abs=1e-4)
     assert m["estimated_runtime_cost_usd"] == 0.08 and m["list_cost_usd_reported"] == "0.41"
+
+
+def test_reproduces_the_platform_reported_cost_of_the_first_real_run():
+    """Real numbers from managed run-001: the platform reported a list cost of $0.60."""
+    usage = SimpleNamespace(input_tokens=50, output_tokens=34022, cache_read_input_tokens=807914, active_seconds=294.374,
+                            cache_creation=SimpleNamespace(ephemeral_5m_input_tokens=67792, ephemeral_1h_input_tokens=0),
+                            list_cost=SimpleNamespace(amount="60", currency="USD"))
+    m = mm.metrics(SimpleNamespace(usage=usage), mm.RunState(), "claude-sonnet-5-5")
+    total = m["estimated_token_cost_usd"] + m["estimated_runtime_cost_usd"]
+    assert round(total, 2) == 0.60
 
 
 @pytest.mark.parametrize("stop,expected", [("end_turn", "completed"), ("budget_reached", "budget_exhausted"),
@@ -264,7 +279,7 @@ def test_final_status_mapping(tmp_path, monkeypatch, stop, expected):
     monkeypatch.setattr(mm.time, "sleep", lambda s: None)
     client = FakeFiles([])
     client.beta.sessions = SimpleNamespace(retrieve=lambda sid: SimpleNamespace(
-        status="idle", usage=SimpleNamespace(input_tokens=1, output_tokens=1, cache_creation_input_tokens=0,
+        status="idle", usage=SimpleNamespace(input_tokens=1, output_tokens=1, cache_creation=None,
                                              cache_read_input_tokens=0, active_seconds=1, list_cost=None)))
     run = mm.RunState()
     run.stop = stop

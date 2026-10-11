@@ -194,3 +194,37 @@ Approved by the user before running: one run plus one resume, $1.50 combined cap
 **Size so far (`uv run python -m experiments.loc`):** managed 229 lines of code (1 Python file) plus 2 configuration files. DIY: 619 lines of code in 6 files plus a Dockerfile. These numbers are not a verdict. `managed/main.py` carries concerns DIY also has (redaction, trace, output handling), and neither side's number says anything about how much *thinking* each took.
 
 **Time spent so far on Phase 4:** about 2h (estimate).
+
+### Phase 4 result: first paid Managed run (`results/managed/run-001`, not committed)
+
+Approved by the user before running: one run on `claude-sonnet-5-5`, session budget $3.00.
+
+| Measure | Value |
+|---|---|
+| Outcome | `end_turn`, status completed, no session errors |
+| Model calls / tool calls | 24 / 27 (bash 22, read 5) |
+| Active session time | 294 s (DIY runs: 175-190 s) |
+| Tokens | 50 uncached input, 34,022 output, 67,792 cache write, 807,914 cache read |
+| Platform-reported list cost | **$0.60** (my token estimate $0.591 + runtime $0.0065 = $0.597) |
+| Artifacts | `report.md`, `analysis.py`, 5 charts, valid `summary.json` with 14 findings |
+| Evaluator | 10 of 10 injected entries, 0 unmatched findings, 0 legitimate patterns flagged as problems |
+
+**Acceptance:** met. The Managed agent completed the task with no local agent loop and no local sandbox.
+
+**Problems found, in the order they appeared**
+1. **My post-processing crashed after the work was done.** `files.list(scope_id=session)` also returns the CSV we uploaded, marked `downloadable: false`, and downloading it returns a 400. The session was fine and the money was spent; only my client code failed. I fixed the client, then re-attached to the finished session with `--attach` (free) to collect the outputs. This is an argument for the design: the work survives a client bug.
+2. **Directories are flattened in the Files API.** The agent wrote `/mnt/session/outputs/charts/01_x.png`; the listing returns `01_x.png`. The output contract requires `charts/`, so `managed/main.py` now puts image files back under `charts/` by extension. If an agent wrote two files with the same name in different directories I do not know what would happen. This is extra application code the DIY side does not need (it owns the filesystem).
+3. **My Sonnet 5.5 price table was wrong.** I had cache reads at $0.20 per million; the pricing page says $0.10 (0.05x input; the $0.20 figure applies to Opus 5.5). I found it because my estimate ($0.68) disagreed with the platform's reported list cost ($0.60). With $0.10 the two agree to within a cent. **Consequence:** every DIY cost I logged earlier is overstated: run-001 was $0.356, not $0.386, and run-002 was $0.368, not $0.411 (arithmetic from the recorded token counts). The code and tests are corrected. The pre-run projections in the Phase 2 table were also a little high.
+4. **The session `usage` object splits cache writes** into `cache_creation.ephemeral_5m_input_tokens` and `..._1h_...`, not the single field the Messages API uses. My first metrics code returned `None` for cost until I read the real response. 1-hour writes are priced at 2x input.
+5. **A matcher false negative.** The Managed agent correctly reported the 14-16 June burst, but the A03 rule required words like "spike" or "volume" and the agent wrote "burst", so it was scored as a miss. I changed A03 so a finding scoped to a window of 10 days or fewer overlapping those dates matches regardless of wording. I made this change after seeing a result, which is the risk I flagged before; the reason it is defensible is that the finding was objectively correct and I re-scored all three runs by the same rule (the DIY scores did not change). Added a regression test, including a wide-window case that must not match.
+
+**Three runs so far, same evaluator: n=3, an anecdote and not a comparison.** DIY run-001 90% (missed West), DIY run-002 100%, Managed run-001 100%.
+
+**Observations for the comparison (not conclusions)**
+- Managed used more tool calls (27 vs 15-19) and more output tokens (34k vs 22k) for roughly the same findings. That could be a larger default toolset (bash/read vs our execute_python), different default behaviour, or chance; five runs each should say.
+- Managed's `analysis.py` hardcodes `/mnt/session/uploads/...` and DIY's `/data/...`. A reproducibility check in Phase 5 has to mount the CSV at whichever path the script uses.
+- No iteration limit exists on the Managed side (only the dollar budget and our timeout); the brief's "max iterations where applicable" is not applicable.
+
+**Leftovers on the Anthropic account** (nothing archived without asking, since archive is permanent): 1 agent (`diy-vs-managed-sales-analyst`, v1), 1 environment (same name), 1 session with its output files. The dry-run session and both uploaded input files were deleted.
+
+**Time spent on Phase 4:** about 4h (estimate), of which about 1h was the post-run fixes and the price correction.

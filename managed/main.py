@@ -34,8 +34,9 @@ STATE_FILE = HERE / ".state.json"
 INPUT_PATH = "/mnt/session/uploads"
 OUTPUT_PATH = "/mnt/session/outputs"
 RUNTIME_USD_PER_HOUR = 0.08
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
 # USD per million tokens: input, output, 5-minute cache write, cache read.
-PRICES = {"claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20), "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20)}
+PRICES = {"claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.10), "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20)}
 SECRET = re.compile(r"sk-ant-[A-Za-z0-9_\-]+")
 RETRYABLE = (anthropic.APIConnectionError, anthropic.InternalServerError, anthropic.RateLimitError)
 
@@ -178,7 +179,12 @@ def download_outputs(client, session_id: str, dest: Path, log=print) -> list[str
         time.sleep(3)
     saved = []
     for f in files:
-        rel = Path(f.filename.removeprefix(OUTPUT_PATH + "/").lstrip("/"))
+        if not getattr(f, "downloadable", True):  # the listing also contains the input file we uploaded
+            continue
+        # The listing returns bare file names: a file written to outputs/charts/a.png comes back as "a.png".
+        # Put images back under charts/ so the output contract holds.
+        name = Path(f.filename.removeprefix(OUTPUT_PATH + "/").lstrip("/"))
+        rel = Path("charts") / name.name if name.suffix.lower() in IMAGE_SUFFIXES else name
         if rel.is_absolute() or ".." in rel.parts:
             log(f"    skipping unsafe output name {f.filename!r}")
             continue
@@ -195,23 +201,33 @@ def money(usage_cost) -> str | None:
 def metrics(session, run: RunState, model: str) -> dict:
     u = session.usage
     inp, out, write, read = PRICES[model]
-    tokens = {k: getattr(u, k, None) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens",
-                                               "cache_read_input_tokens")}
+    cache = getattr(u, "cache_creation", None)  # cache writes come back split by lifetime
+    tokens = {"input_tokens": getattr(u, "input_tokens", None), "output_tokens": getattr(u, "output_tokens", None),
+              "cache_read_input_tokens": getattr(u, "cache_read_input_tokens", None),
+              "cache_write_5m_tokens": getattr(cache, "ephemeral_5m_input_tokens", None),
+              "cache_write_1h_tokens": getattr(cache, "ephemeral_1h_input_tokens", None)}
     active = getattr(u, "active_seconds", None)
     token_cost = None
     if all(v is not None for v in tokens.values()):
         token_cost = (tokens["input_tokens"] * inp + tokens["output_tokens"] * out
-                      + tokens["cache_creation_input_tokens"] * write + tokens["cache_read_input_tokens"] * read) / 1e6
-    return {"session_usage": tokens, "active_seconds": active, "events_usage": run.model_usage,
-            "model_calls": run.model_calls, "tool_calls": run.tool_calls,
+                      + tokens["cache_write_5m_tokens"] * write + tokens["cache_write_1h_tokens"] * 2 * inp
+                      + tokens["cache_read_input_tokens"] * read) / 1e6
+    return {"session_usage": tokens, "active_seconds": active,
+            "events_usage": run.model_usage, "model_calls": run.model_calls, "tool_calls": run.tool_calls,
             "estimated_token_cost_usd": None if token_cost is None else round(token_cost, 4),
             "estimated_runtime_cost_usd": None if active is None else round(active / 3600 * RUNTIME_USD_PER_HOUR, 4),
             "list_cost_usd_reported": money(getattr(u, "list_cost", None))}
 
 
-def finish(client, session_id: str, run_dir: Path, run: RunState, model: str, started: float, log=print) -> int:
+def finish(client, session_id: str, run_dir: Path, run: RunState, model: str, started: float, log=print,
+           input_file_id: str | None = None) -> int:
     session = client.beta.sessions.retrieve(session_id)
     saved = download_outputs(client, session_id, run_dir / "outputs", log)
+    if input_file_id:  # the uploaded input is ours to clean up
+        try:
+            client.beta.files.delete(input_file_id)
+        except anthropic.APIError as e:
+            log(f"    could not delete the uploaded input file: {e}")
     status = {"end_turn": "completed", "budget_reached": "budget_exhausted", "timeout": "max_duration"}.get(
         run.stop, "failed")
     if run.errors and status == "completed":
@@ -231,7 +247,7 @@ def render_summary(s: dict) -> str:
     m = s["metrics"]
     lines = [f"# Managed run {s['session_id']}", "", f"- Status: **{s['status']}** (stop reason {s['stop_reason']}, "
              f"session {s['session_status']})", f"- Model: {s['model']}",
-             f"- Wall time: {s['wall_seconds']}s   Active session time: {m['active_seconds']}s",
+             f"- Active session time: {m['active_seconds']}s",
              f"- Model calls: {m['model_calls']}   Tool calls: {m['tool_calls']}",
              f"- Tokens (session): {m['session_usage']}",
              f"- Estimated cost: tokens ${m['estimated_token_cost_usd']} + runtime ${m['estimated_runtime_cost_usd']}; "
@@ -269,7 +285,7 @@ def main(argv=None) -> int:
     if a.attach:
         info = json.loads((a.attach / "session.json").read_text())
         run = observe(client, info["session_id"], a.attach / "trace.jsonl", deadline)
-        return finish(client, info["session_id"], a.attach, run, info["model"], started)
+        return finish(client, info["session_id"], a.attach, run, info["model"], started, input_file_id=info.get("file_id"))
 
     state = ensure_resources(client)
     model = read_agent_file(HERE / "agent.md")["model"]
@@ -295,9 +311,7 @@ def main(argv=None) -> int:
         client.beta.files.delete(csv.id)
         return 0
     run = observe(client, session.id, run_dir / "trace.jsonl", deadline)
-    code = finish(client, session.id, run_dir, run, model, started)
-    client.beta.files.delete(csv.id)  # the uploaded input is ours to clean up (left in place if the run is interrupted)
-    return code
+    return finish(client, session.id, run_dir, run, model, started, input_file_id=csv.id)
 
 
 if __name__ == "__main__":

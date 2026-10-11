@@ -22,7 +22,7 @@ from diy.tools import Dispatcher
 
 # USD per million tokens: input, output, 5-minute cache write, cache read.
 PRICES = {
-    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
+    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.10),  # cache reads are 0.05x input on Sonnet 5.5 and Opus 5.5
     "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20),
 }
 API_RETRY_DELAYS_S = (5, 20, 60)  # on top of the SDK's own two quick retries

@@ -274,7 +274,7 @@ def build_ground_truth(seed, out, row_ids, tagged, a02_products):
         anomaly("A03", "injected_anomaly", "Three-day transaction volume spike",
                 "About 350 extra transactions on 14-16 Jun, roughly 5x a normal day.",
                 {"start": f"{YEAR}-06-14", "end": f"{YEAR}-06-16", "extra_rows": 350},
-                [{"date_overlap": [f"{YEAR}-06-14", f"{YEAR}-06-16"], "max_span_days": 10, **kw(any_=["spike", "surge", "volume", "increase", "jump"])},
+                [{"date_overlap": [f"{YEAR}-06-14", f"{YEAR}-06-16"], "max_span_days": 10},
                  kw(["june"], ["spike", "surge", "volume"])],
                 tagged["A03"]),
         anomaly("A04", "injected_defect", "Revenue inconsistent with quantity, price and discount",
