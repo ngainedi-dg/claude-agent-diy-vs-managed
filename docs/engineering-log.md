@@ -64,3 +64,40 @@ unless marked measured.
 
 **Infrastructure avoided through Managed Agents:** not applicable yet.
 **Time spent:** about 2.5h (estimate, including debugging the ID bug).
+
+## 2026-10-11 — Phase 2: Minimal DIY agent (built, not yet run against the API)
+
+**Work done**
+- `diy/agent_loop.py`: the loop, written by hand against `client.messages.create`. It checks `stop_reason`, runs every `tool_use` block, returns all results in one user message with matching IDs, and echoes `response.content` back unchanged (so thinking blocks stay valid). Handles `end_turn`, `tool_use`, `max_tokens` (a truncated tool call is not executed), `refusal` and `pause_turn`.
+- Limits: max iterations, wall-clock and an estimated-cost ceiling. A tool_use ID is never executed twice.
+- `diy/tools.py`: `list_files`, `read_file`, `write_file`, `execute_python`, `run_command`. Arguments are validated against JSON Schema before anything runs. Paths are confined to `/workspace` (and `/data` read-only). `run_command` is an allowlist with no shell.
+- `diy/sandbox.py` and `diy/Dockerfile`: one container per run, driven by `docker exec`.
+- `diy/main.py` with `--dry-run` (sandbox and tools only, no model calls) and `experiments/estimate_cost.py` (uses the free `count_tokens` endpoint).
+- 64 tests pass, including real-Docker tests for isolation (no network, non-root uid 1000, read-only root and data mount, no API key in the environment, timeout kill).
+
+**Decision: Docker pulled forward from Phase 3**
+The brief schedules the sandbox in Phase 3 and allows a simpler executor in Phase 2. I did not do that. The API key sits in `.env.local` on a filesystem the host process can read, and the first paid run would execute model-written code. A subprocess executor would have been quicker but unsafe, so the basic container came first. This inflates Phase 2 effort relative to the brief's plan; it belongs to the DIY column of the comparison either way. Phase 3 still owns sessions, persistence, recovery and the extra error handling.
+
+**Complications**
+- `uv run pytest` with the virtualenv on `/mnt/c` took about 96s per run. Putting the venv on the Linux filesystem (`UV_PROJECT_ENVIRONMENT=$HOME/.venvs/diy-vs-managed`) brought a run down to about 4s. Worth documenting for WSL users.
+- A nested here-doc inside a script piped to `bash -s` hung `uv run`. Avoid nested here-docs in piped scripts.
+- `anthropic` 1.13.0 installed (the pin `>=0.92.0` is satisfied) and it no longer depends on `httpx`, so a test that imported `httpx` to build an API error failed. The test now builds `anthropic.APIError` directly.
+- A test expecting exactly `$2.00` was wrong by `$0.0001` (the fake usage had 10 output tokens). Test bug, not a code bug.
+- Whether the Messages API accepts the top-level `cache_control` I enabled for prompt caching is not confirmed by the SDK signature alone; the first real call will show it.
+
+**Design decisions**
+- Prompt caching is on for the DIY loop (top-level `cache_control`). A competent developer would enable it; without it the same run costs roughly 3x more. Managed Agents presumably handles this itself, so the comparison must report cache usage separately.
+- Tool output is truncated to 10,000 characters per stream (head and tail kept). This is the only context management so far.
+- No completion check beyond `end_turn`. If the agent stops without writing a deliverable, the evaluator reports it; the harness does not nudge it.
+- The "Environment" paragraph appended to the task differs per implementation (paths only). Everything else in the prompt is shared.
+
+**Cost estimate for the first paid run** (measured fixed prompt: 2,342 tokens; projections below are a model, not a measurement)
+
+| Scenario | With caching | Without caching |
+|---|---|---|
+| 12 turns | $0.26 | $0.53 |
+| 25 turns | $0.89 | $2.67 |
+| 40 turns (the limit) | $2.29 | $8.99 |
+
+**Infrastructure avoided through Managed Agents:** not applicable yet.
+**Time spent:** about 3h (estimate), including the Docker work pulled forward.
