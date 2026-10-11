@@ -1,11 +1,10 @@
 import json
 import re
 
-import pandas as pd
 import pytest
 from jsonschema import Draft202012Validator
 
-from evaluation.evaluate import (SCHEMA_PATH, canonical_metric, check_numeric_claims, evaluate_run, find_runs)
+from evaluation.evaluate import SCHEMA_PATH, evaluate_run, find_runs
 from evaluation.ground_truth import finding_matches, rule_matches, score_findings
 from task.generate_data import generate
 from tests.conftest import ROOT
@@ -152,40 +151,6 @@ def test_bad_confidence_and_dates_rejected(validator):
     assert len(list(validator.iter_errors(doc))) == 3  # bad enum, two malformed dates
 
 
-# --- numeric claims --------------------------------------------------------
-
-DF = pd.DataFrame({"transaction_id": ["T1", "T2", "T2"], "revenue": [100.0, 200.0, 200.0],
-                   "category": ["A", None, None], "quantity": [1, -1, -1],
-                   "customer_id": ["C1", "C2", "C2"], "product_id": ["P1", "P1", "P1"]})
-
-
-def test_segment_scoped_findings_are_not_checked_against_the_whole_file():
-    # Found in the first real run: "row_count: 6" in a finding about six transactions is not a claim about the file.
-    scoped = finding(segment={"transaction_ids": ["T1"]}, evidence=[{"metric": "row_count", "value": 6}])
-    r = check_numeric_claims([scoped], DF)
-    assert (r["verified_correct"], r["verified_incorrect"], r["unverifiable"]) == (0, 0, 1)
-
-
-def test_numeric_claims_split_correct_incorrect_unverifiable():
-    f = finding(evidence=[
-        {"metric": "Total Revenue", "value": 500.0},       # correct
-        {"metric": "row_count", "value": 10},               # incorrect
-        {"metric": "west_share_pct", "value": 22.5},        # unverifiable
-        {"metric": "missing_category_count", "value": "2"}, # string -> unverifiable
-    ])
-    r = check_numeric_claims([f], DF)
-    assert (r["verified_correct"], r["verified_incorrect"], r["unverifiable"]) == (1, 1, 2)
-
-
-def test_numeric_claims_unavailable_without_dataset():
-    assert check_numeric_claims([finding()], None) == {"available": False}
-
-
-def test_metric_aliases():
-    assert canonical_metric("Transaction Count") == "row_count"
-    assert canonical_metric("total-revenue") == "total_revenue"
-
-
 # --- whole runs ------------------------------------------------------------
 
 def make_run(path, summary=None, charts=2, report="## Limitations\nSome uncertainty. Recommended follow-up."):
@@ -202,7 +167,7 @@ def make_run(path, summary=None, charts=2, report="## Limitations\nSome uncertai
 def test_complete_run(tmp_path, truth, validator):
     run = tmp_path / "diy" / "run1"
     make_run(run)
-    r = evaluate_run(run, truth, DF, validator)
+    r = evaluate_run(run, truth, None, validator)
     assert r["required_artifacts_complete"] and r["schema_valid"]
     assert r["artifacts"]["report_mentions_uncertainty"] and r["artifacts"]["report_mentions_follow_up"]
     assert find_runs(tmp_path) == [run]
@@ -211,14 +176,14 @@ def test_complete_run(tmp_path, truth, validator):
 def test_incomplete_runs(tmp_path, truth, validator):
     few_charts = tmp_path / "a"
     make_run(few_charts, charts=1)
-    assert not evaluate_run(few_charts, truth, DF, validator)["required_artifacts_complete"]
+    assert not evaluate_run(few_charts, truth, None, validator)["required_artifacts_complete"]
 
     bad = tmp_path / "b"
     make_run(bad, summary={"findings": [{"finding_id": "F1"}]})
-    r = evaluate_run(bad, truth, DF, validator)
+    r = evaluate_run(bad, truth, None, validator)
     assert not r["schema_valid"] and r["schema_errors"] and "detection" not in r
 
     broken = tmp_path / "c"
     make_run(broken)
     (broken / "summary.json").write_text("{not json", encoding="utf-8")
-    assert "not valid JSON" in evaluate_run(broken, truth, DF, validator)["schema_errors"][0]
+    assert "not valid JSON" in evaluate_run(broken, truth, None, validator)["schema_errors"][0]

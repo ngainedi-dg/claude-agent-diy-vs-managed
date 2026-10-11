@@ -6,8 +6,8 @@ A run directory is any directory under --results that contains report.md,
 analysis.py, summary.json or charts/. The evaluator writes evaluation.json
 into each run directory and prints a summary table.
 
-It never executes agent-written code. Whether analysis.py runs is checked
-separately, inside a sandbox (Phase 5).
+Agent-written code is never run on the host. With --run-analysis, each analysis.py is
+run inside a container (evaluation/reproduce.py) to check that it works on the original CSV.
 """
 
 import argparse
@@ -19,70 +19,15 @@ from pathlib import Path
 import pandas as pd
 from jsonschema import Draft202012Validator
 
+from evaluation.claims import check_claims
 from evaluation.ground_truth import DEFAULT_PATH, load_ground_truth, score_findings
+from evaluation.reproduce import run_analysis
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "task" / "summary.schema.json"
 DATASET_PATH = ROOT / "task" / "data" / "sales_transactions.csv"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
 RUN_MARKERS = ("report.md", "analysis.py", "summary.json", "charts")
-
-
-def recompute_metrics(df: pd.DataFrame) -> dict[str, float]:
-    """Numbers the evaluator can recompute from the raw CSV, keyed by canonical metric name."""
-    return {
-        "total_revenue": float(df.revenue.sum()),
-        "row_count": float(len(df)),
-        "unique_transaction_ids": float(df.transaction_id.nunique()),
-        "duplicate_transaction_ids": float(len(df) - df.transaction_id.nunique()),
-        "duplicate_rows": float(df.duplicated().sum()),
-        "missing_category_count": float(df.category.isna().sum()),
-        "negative_quantity_count": float((df.quantity < 0).sum()),
-        "unique_customers": float(df.customer_id.nunique()),
-        "unique_products": float(df.product_id.nunique()),
-    }
-
-
-METRIC_ALIASES = {
-    "transaction_count": "row_count", "num_transactions": "row_count", "total_transactions": "row_count",
-    "rows": "row_count", "total_rows": "row_count",
-    "total_recorded_revenue": "total_revenue", "revenue_total": "total_revenue",
-    "duplicate_row_count": "duplicate_rows", "duplicate_count": "duplicate_transaction_ids",
-    "missing_category_rows": "missing_category_count", "null_category_count": "missing_category_count",
-    "negative_quantity_rows": "negative_quantity_count",
-    "customer_count": "unique_customers", "product_count": "unique_products",
-}
-
-
-def canonical_metric(name: str) -> str:
-    key = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
-    return METRIC_ALIASES.get(key, key)
-
-
-def check_numeric_claims(findings: list[dict], df: pd.DataFrame | None) -> dict:
-    """Compare evidence values the evaluator can recompute. Everything else is unverifiable, not wrong.
-
-    Only dataset-wide findings (empty segment) are checked: a metric called "row_count" inside a
-    finding about six transactions means six, not the size of the file.
-    """
-    if df is None:
-        return {"available": False}
-    truth = recompute_metrics(df)
-    correct, incorrect, unverifiable = [], [], 0
-    for f in findings:
-        dataset_wide = not f.get("segment")
-        for item in f.get("evidence", []):
-            key = canonical_metric(str(item.get("metric", "")))
-            value = item.get("value")
-            if (not dataset_wide or key not in truth or isinstance(value, bool)
-                    or not isinstance(value, (int, float))):
-                unverifiable += 1
-                continue
-            tol = max(0.01 * abs(truth[key]), 0.5)
-            record = {"finding": f.get("finding_id"), "metric": key, "claimed": value, "actual": truth[key]}
-            (correct if abs(value - truth[key]) <= tol else incorrect).append(record)
-    return {"available": True, "verified_correct": len(correct), "verified_incorrect": len(incorrect),
-            "unverifiable": unverifiable, "incorrect_details": incorrect}
 
 
 def check_artifacts(run: Path) -> dict:
@@ -113,7 +58,8 @@ def load_summary(run: Path, validator: Draft202012Validator):
     return data, errors
 
 
-def evaluate_run(run: Path, truth: dict, df: pd.DataFrame | None, validator) -> dict:
+def evaluate_run(run: Path, truth: dict, df: pd.DataFrame | None, validator, *, dataset: Path | None = None,
+                 reproduce: bool = False) -> dict:
     artifacts = check_artifacts(run)
     summary, schema_errors = load_summary(run, validator)
     result = {"run": str(run), "artifacts": artifacts, "schema_valid": summary is not None and not schema_errors,
@@ -122,7 +68,9 @@ def evaluate_run(run: Path, truth: dict, df: pd.DataFrame | None, validator) -> 
     result["finding_count"] = len(findings)
     if summary is not None and not schema_errors:
         result["detection"] = score_findings(findings, truth)
-        result["numeric_claims"] = check_numeric_claims(findings, df)
+        result["numeric_claims"] = check_claims(findings, df)
+    if reproduce and dataset is not None:
+        result["analysis_reproduction"] = run_analysis(run, dataset)
     result["required_artifacts_complete"] = all(
         [artifacts["report_md"], artifacts["analysis_py"], artifacts["charts_ok"], result["schema_valid"]])
     return result
@@ -154,6 +102,8 @@ def main(argv=None) -> int:
     ap.add_argument("--ground-truth", type=Path, default=DEFAULT_PATH)
     ap.add_argument("--dataset", type=Path, default=DATASET_PATH)
     ap.add_argument("--no-write", action="store_true", help="do not write evaluation.json files")
+    ap.add_argument("--run-analysis", action="store_true",
+                    help="also run each analysis.py inside a container (needs Docker)")
     a = ap.parse_args(argv)
 
     if not a.ground_truth.is_file():
@@ -167,7 +117,7 @@ def main(argv=None) -> int:
     if not runs:
         print(f"no run directories found under {a.results}")
         return 0
-    rows = [evaluate_run(r, truth, df, validator) for r in runs]
+    rows = [evaluate_run(r, truth, df, validator, dataset=a.dataset, reproduce=a.run_analysis) for r in runs]
     if not a.no_write:
         for r in rows:
             (Path(r["run"]) / "evaluation.json").write_text(json.dumps(r, indent=2) + "\n", encoding="utf-8")

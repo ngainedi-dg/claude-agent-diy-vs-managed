@@ -228,3 +228,29 @@ Approved by the user before running: one run on `claude-sonnet-5-5`, session bud
 **Leftovers on the Anthropic account** (nothing archived without asking, since archive is permanent): 1 agent (`diy-vs-managed-sales-analyst`, v1), 1 environment (same name), 1 session with its output files. The dry-run session and both uploaded input files were deleted.
 
 **Time spent on Phase 4:** about 4h (estimate), of which about 1h was the post-run fixes and the price correction.
+
+## 2026-10-12 — Phase 5: Comparison experiments (tooling built; paid runs awaiting approval)
+
+Pushed Phases 0-4 to `origin/main` at the user's request before starting (secret scan of tracked files first: only the fake keys used in tests; no `.env`, dataset, ground truth, trace or database tracked).
+
+**Built (all free to test; 151 tests pass)**
+- `evaluation/metrics.py`: one normalised metrics record for both implementations. One price table, tests assert it equals the two copies in the implementations. A value we could not observe is `None`. Platform runtime charge is kept separate from token charge; the platform-reported list cost is kept alongside.
+- `evaluation/reproduce.py`: runs each `analysis.py` in a locked-down container (no network, non-root, read-only root, limits, hard timeout) with the CSV mounted at both implementations' hardcoded paths. It runs in a scratch copy, so `results/` is untouched. Real check on the three pilot runs: **all three scripts run and reproduce on the original CSV.**
+- `evaluation/claims.py`: the numeric-claims check, redesigned (see below).
+- `experiments/run_comparison.py`: alternating-order repeated runs, per-run and per-experiment cost caps, `--yes` required before any spend, finished runs skipped so an interrupted experiment resumes, `--report-only`, a report with mean (min-max) per measure and per-anomaly detection counts. `--model` must match `managed/agent.md` or the runner refuses, so the comparison cannot silently be unlike for like.
+- `experiments/failure_scenarios.py`: the brief's reliability scenarios as micro-tasks with known answers, plus budget/iteration limits and a real kill-and-resume for both implementations. `--bare` was added to both `main.py` files so micro-tasks do not inherit the sales-report deliverables.
+
+**Design problems found and what I decided**
+- **The numeric-claims check cannot honestly say "incorrect".** Applied to real pilot output, my first version labelled 5 claims "incorrect" in one run. Looking at them: "19 rows, $8,801" was about the 19 deep-discount rows (a sub-selection the finding's segment does not express); a customer's "171 orders" was the customer total while the segment also listed a region; a product's "68 orders" included rows with a corrupted category that my category filter excluded. None were agent errors. A check that mislabels correct claims would damage the comparison more than it helps. It now tries the segment and every sub-combination of its keys, on four cleaning variants, and reports **supported / unsupported / unverifiable**. "Unsupported" does not mean wrong. Even so, coverage is low (only metrics whose name uses plain words like revenue, orders, rows, mean discount are checked) and a number can match by coincidence. I am recording this as a limitation of the evaluation, not a solved problem.
+- A budget-accounting bug in the runner (`cost or cap` treats a genuine $0.00 as unknown) was caught by a test that passed for the wrong reason; fixed with an explicit `None` check and a test for it.
+- `evaluation/` imports nothing from `diy/` or `managed/`; it only depends on the sandbox image built from `diy/Dockerfile`.
+
+**Evidence of the three pilot runs under the new evaluator**: all produce valid artifacts, all `analysis.py` files re-run, recall 90% / 100% / 100%.
+
+**LOC now:** DIY 625 (6 files + Dockerfile), Managed 246 (1 file + 2 config files), evaluation 395, experiments 420, tests 1,121.
+
+**Time spent so far on Phase 5 tooling:** about 4h (estimate).
+
+**Pending: paid runs, in two parts, each needing approval**
+1. 5 + 5 repetitions of the main task, estimated $4.80 from the pilot means ($0.36 DIY, $0.60 managed), hard stop $8.00.
+2. Failure scenarios, estimated $1.50-$2.00.

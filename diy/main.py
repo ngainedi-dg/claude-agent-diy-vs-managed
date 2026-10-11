@@ -38,8 +38,18 @@ ENVIRONMENT = """
 """
 
 
-def build_task(task_path: Path, data_name: str) -> str:
-    env = ENVIRONMENT.format(data=f"{DATA_MOUNT}/{data_name}", workspace=WORKSPACE)
+ENVIRONMENT_BARE = """
+## Environment
+
+- Input files are in `{data_dir}` (read-only).
+- Your working directory and output directory is `{workspace}`.
+"""
+
+
+def build_task(task_path: Path, data_name: str, bare: bool = False) -> str:
+    """The task text plus where things are. `bare` is for short fault-injection tasks that have no deliverables."""
+    env = (ENVIRONMENT_BARE.format(data_dir=DATA_MOUNT, workspace=WORKSPACE) if bare
+           else ENVIRONMENT.format(data=f"{DATA_MOUNT}/{data_name}", workspace=WORKSPACE))
     return task_path.read_text(encoding="utf-8").rstrip() + "\n" + env
 
 
@@ -80,6 +90,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-cost", type=float, help="USD; the run stops when estimated cost reaches this")
     ap.add_argument("--out", type=Path, default=None, help="run directory (default results/diy/<timestamp>)")
     ap.add_argument("--dry-run", action="store_true", help="start the sandbox and run the tools; make no model calls")
+    ap.add_argument("--bare", action="store_true", help="describe only the input and output directories (fault-injection tasks)")
     a = ap.parse_args(argv)
     if not a.task and not a.resume:
         ap.error("--task is required unless --resume is given")
@@ -107,7 +118,7 @@ def main(argv=None) -> int:
         run_dir = a.out or ROOT / "results" / "diy" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         limits = Limits(a.max_iterations or 40, int((a.timeout_minutes or 30) * 60), a.max_cost or 3.00)
         session = None if a.dry_run else Session.create(
-            run_dir / "session.sqlite", task=build_task(a.task, a.data.name),
+            run_dir / "session.sqlite", task=build_task(a.task, a.data.name, a.bare),
             system=a.system.read_text(encoding="utf-8").strip(), model=a.model, limits=limits)
 
     try:

@@ -49,6 +49,14 @@ ENVIRONMENT = f"""
 """
 
 
+ENVIRONMENT_BARE = f"""
+## Environment
+
+- Input files are in `{INPUT_PATH}/` (read-only).
+- Your output directory is `{OUTPUT_PATH}/`.
+"""
+
+
 def redact(text: str) -> str:
     text = SECRET.sub("[REDACTED]", text)
     for name, value in os.environ.items():
@@ -269,6 +277,7 @@ def main(argv=None) -> int:
     ap.add_argument("--timeout-minutes", type=float, default=30)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--dry-run", action="store_true", help="create the resources and a session, but run no work")
+    ap.add_argument("--bare", action="store_true", help="describe only the input and output directories (fault-injection tasks)")
     a = ap.parse_args(argv)
     if not a.task and not a.attach:
         ap.error("--task is required unless --attach is given")
@@ -294,7 +303,7 @@ def main(argv=None) -> int:
 
     with a.data.open("rb") as f:
         csv = client.beta.files.upload(file=(a.data.name, f, "text/csv"))
-    task = a.task.read_text(encoding="utf-8").rstrip() + ENVIRONMENT if a.task else ""
+    task = a.task.read_text(encoding="utf-8").rstrip() + (ENVIRONMENT_BARE if a.bare else ENVIRONMENT) if a.task else ""
     session = client.beta.sessions.create(
         agent={"type": "agent", "id": state["agent"]["id"], "version": state["agent"]["version"]},
         environment_id=state["environment"]["id"], title=f"diy-vs-managed {run_dir.name}",
