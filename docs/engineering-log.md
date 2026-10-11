@@ -254,3 +254,22 @@ Pushed Phases 0-4 to `origin/main` at the user's request before starting (secret
 **Pending: paid runs, in two parts, each needing approval**
 1. 5 + 5 repetitions of the main task, estimated $4.80 from the pilot means ($0.36 DIY, $0.60 managed), hard stop $8.00.
 2. Failure scenarios, estimated $1.50-$2.00.
+
+## 2026-10-12 — Correction: the "time spent" figures above are not measurements
+
+Every "Time spent" line in this log (0.5h, 2.5h, 3h, 4h, 5h, 2h, 4h, 4h) was an estimate I wrote down without a timer, and they are inconsistent with the commit timestamps. For example Phase 1 is logged as about 2.5h, but the repository shows it started at 23:17 and was committed at 23:36 (19 minutes). Do not use those figures.
+
+The only time data this project has is wall-clock timestamps from git and from the run files. They measure elapsed time between milestones, **including** time spent waiting for approvals, paid runs and tool output, so they are neither effort nor a fair "how long would a human take". Per-component effort (loop, sandbox, sessions, etc.) was **not tracked**, which the brief asked for, and cannot be reconstructed.
+
+| Milestone commit | Time (IST, 2026-10-11/12) | Elapsed since previous |
+|---|---|---|
+| Brief committed | 23:14 | - |
+| Phase 0 findings logged | 23:17 | 3 min |
+| Phase 1 (dataset, evaluator) | 23:36 | 19 min |
+| Phase 2 (DIY loop, tools, Docker sandbox) | 23:52 | 16 min |
+| Phase 3 (sessions, recovery, retries) | 00:09 | 17 min |
+| Phase 4 (Managed implementation) | 00:22 | 13 min after Phase 3 validation commit at 00:14 |
+| Phase 4 fixes and first Managed run logged | 00:33 | 11 min |
+| Phase 5 tooling | 00:45 | 12 min |
+
+Other measured points: first complete DIY run finished about 23:56; first complete Managed session finished about 00:28 (session timestamps 18:53-18:58 UTC).
