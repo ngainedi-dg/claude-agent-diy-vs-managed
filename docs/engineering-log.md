@@ -276,7 +276,7 @@ Other measured points: first complete DIY run finished about 23:56; first comple
 
 ## 2026-10-12 — Phase 5 results: experiment and reliability scenarios
 
-All runs approved by the user beforehand (experiment about $4.80 with an $8.00 stop; scenarios about $1.50-$2.00). Raw results are in `results/` (gitignored); the research summary is `LINKEDIN_FINDINGS.md`.
+All runs approved by the user beforehand (experiment about $4.80 with an $8.00 stop; scenarios about $1.50-$2.00). Raw results are in `results/` (gitignored); the committed, metrics-only summary is in `docs/results/` and the write-up is in `docs/comparison.md` and `docs/findings.md`.
 
 **Main experiment (5 + 5 runs, alternating order):** all 10 completed. Median active time 171 s (DIY) vs 271 s (Managed); median cost $0.34 vs $0.56; median recall 0.90 on both (Managed n=4 scored; rep 1 failed the `summary.json` schema with a boolean evidence value). `analysis.py` reran in a clean container for all 10. Spend $4.79.
 

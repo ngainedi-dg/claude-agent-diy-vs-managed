@@ -88,3 +88,7 @@ The managed run creates a real agent, environment and sessions in your Anthropic
 | `docs/` | brief, architecture, comparison, findings, engineering log; `docs/results/` holds metrics-only run data |
 
 The [engineering log](docs/engineering-log.md) was written as the work happened, including corrections to earlier entries. Read it for what went wrong, not only what was built.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
