@@ -6,6 +6,8 @@ The same autonomous data-analyst agent, built twice: once on the Claude Messages
 
 This is a small experiment, not a benchmark. It does not ask which agent is smarter (both are Claude). It asks what you have to build, run and debug yourself in each case.
 
+**How it was built:** by one person working with an AI coding assistant (Claude, in Claude Code). The assistant wrote the code, tests and docs. The person set the brief, approved every paid run and every push, and made the calls on scope and results. The [engineering log](docs/engineering-log.md) is written in the assistant's voice: "I" is the assistant, "the user" is the repository owner. Because of this, timings in the repo are not estimates of what a human team would need.
+
 ## What the agent does
 
 It receives a CSV of 9,980 synthetic sales transactions and one instruction: explore the data, find trends and anomalies, investigate anything suspicious, chart it, and write a report. It decides for itself what to look at, writes and runs Python, reads the results and fixes its own errors. It must produce `report.md`, `analysis.py`, `charts/` and a schema-checked `summary.json`.
